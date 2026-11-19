@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -63,11 +64,49 @@ jobs:
         run: npm run build
 
       - name: Package installers
+        id: package
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npx electron-builder --config electron-builder.yml --${{ matrix.platform }} --publish never
+        run: |
+          set -o pipefail
+          npx electron-builder --config electron-builder.yml --${{ matrix.platform }} --publish never 2>&1 | tee ../package-${{ matrix.platform }}.log
         working-directory: browser
+
+      - name: Report packaging failure
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node -e "
+            const fs = require('fs');
+            const file = 'package-${{ matrix.platform }}.log';
+            let text = '';
+            try { text = fs.readFileSync(file, 'utf8'); } catch { text = 'no log file produced'; }
+            const lines = text.split('
+');
+            const interesting = lines.filter((l) => /error|⨯|cannot|failed|not found|ENOENT|EACCES/i.test(l)).slice(-25);
+            const tail = lines.slice(-40).join('
+');
+            const body = '### ${{ matrix.name }} packaging failed
+
+**Matching lines**
+```
+' + interesting.join('
+') + '
+```
+
+**Tail**
+```
+' + tail + '
+```
+
+Run: ' + process.env.GITHUB_SERVER_URL + '/' + process.env.GITHUB_REPOSITORY + '/actions/runs/' + process.env.GITHUB_RUN_ID;
+            fs.writeFileSync('comment.json', JSON.stringify({ body }));
+          "
+          gh api --method POST "repos/${{ github.repository }}/issues/1/comments" --input comment.json > /dev/null || true
 
       - name: Collect artifacts
         uses: actions/upload-artifact@v4
