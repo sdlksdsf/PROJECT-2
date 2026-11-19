@@ -12,6 +12,13 @@ import { internalUrl, type DeepPartial, type InternalPage, type Preferences } fr
 import { APP_HOMEPAGE } from '../shared/defaults';
 import type { FilterEngine } from './privacy/engine';
 import { logStartup, reportStartupError } from './log';
+import {
+  InstanceHeartbeat,
+  acquireInstance,
+  clearInstanceState,
+  retryLock,
+  terminateOtherInstances
+} from './instance';
 
 /**
  * Kimmino bootstrap.
@@ -49,6 +56,15 @@ app.commandLine.appendSwitch(
 app.commandLine.appendSwitch('enable-features', 'BackForwardCache:TimeToLiveInBackForwardCache/0');
 
 app.setName('Kimmino');
+
+/** How long a started app may go without a window before we call it dead. */
+const BOOT_WATCHDOG_MS = 10_000;
+
+// `Kimmino.exe --safe-mode` (or KIMMINO_SAFE_MODE=1) skips the GPU process: the
+// standard escape hatch for machines whose driver crashes Chromium at startup.
+if (process.argv.includes('--safe-mode') || process.env.KIMMINO_SAFE_MODE === '1') {
+  app.disableHardwareAcceleration();
+}
 
 let bootCompleted = false;
 
@@ -88,12 +104,18 @@ const isDev = !app.isPackaged;
 const rendererDevUrl = process.env.ELECTRON_RENDERER_URL ?? null;
 
 class KimminoApp {
+  constructor(private readonly heartbeat: InstanceHeartbeat) {}
+
   readonly profiles = new ProfileManager();
   readonly filters = new FiltersService(app.getAppPath());
   private readonly windows = new Map<number, KimminoWindow>();
   private readonly runtimes = new Map<string, ProfileRuntime>();
   private stats = { ads: 0, trackers: 0, cookies: 0, session: 0 };
   private quitting = false;
+
+  get windowCount(): number {
+    return this.windows.size;
+  }
 
   boot(): void {
     this.filters.load();
@@ -179,6 +201,20 @@ class KimminoApp {
   }
 
   createWindow(options: { profileId?: string; incognito?: boolean } = {}): void {
+    try {
+      this.openWindow(options);
+    } catch (error) {
+      reportStartupError('create window', error);
+      // Never sit in the task manager holding the profile without a window.
+      if (this.windows.size === 0) {
+        this.heartbeat.stop();
+        clearInstanceState();
+        app.exit(1);
+      }
+    }
+  }
+
+  private openWindow(options: { profileId?: string; incognito?: boolean } = {}): void {
     const profileId = options.profileId ?? this.profiles.currentId();
     const incognito = options.incognito ?? false;
     const runtime = this.runtimeFor(profileId, incognito);
@@ -194,6 +230,7 @@ class KimminoApp {
       rendererFile: path.join(__dirname, '../renderer/index.html'),
       onClose: () => {
         this.windows.delete(win.id);
+        this.heartbeat.setWindows(this.windows.size);
         if (!this.windows.size && !this.quitting && process.platform !== 'darwin') {
           if (BrowserWindow.getAllWindows().length === 0) app.quit();
         }
@@ -204,9 +241,11 @@ class KimminoApp {
     });
 
     this.windows.set(win.id, win);
+    this.heartbeat.setWindows(this.windows.size);
     win.boot(!incognito && this.shouldRestoreSession());
     win.win.on('closed', () => {
       this.windows.delete(win.id);
+      this.heartbeat.setWindows(this.windows.size);
     });
 
     setTimeout(() => {
@@ -304,13 +343,23 @@ class KimminoApp {
     });
     app.on('before-quit', () => {
       this.quitting = true;
+      this.heartbeat.stop();
+      clearInstanceState();
       for (const runtime of this.runtimes.values()) runtime.dispose();
       this.profiles.flush();
     });
     // Open external links in a Kimmino tab instead of handing them to another browser.
     app.on('second-instance', (_event, argv) => {
       const url = argv.find((arg) => /^https?:\/\//.test(arg));
-      const win = this.activeWindow();
+      let win = this.activeWindow();
+      if (!win) {
+        // The user launched Kimmino again while we had no window at all. Opening
+        // one is the whole point of this handler — staying invisible is what made
+        // a stuck build look like "the app does not start".
+        logStartup('second-instance arrived with no window — opening one');
+        this.createWindow();
+        win = this.activeWindow();
+      }
       if (url && win) win.tabs.create(url, { active: true });
       else win?.focus();
     });
@@ -326,22 +375,25 @@ class KimminoApp {
 
 /* ---------------------------------------------------------------------- */
 
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) {
-  app.quit();
-} else {
-  const kimmino = new KimminoApp();
+const heartbeat = new InstanceHeartbeat(app.getVersion());
+
+function startPrimary(): void {
+  // Publish the heartbeat before anything can fail, so that a process which
+  // never reaches `ready` is still identifiable by the next launch.
+  heartbeat.start();
+  const kimmino = new KimminoApp(heartbeat);
 
   app
     .whenReady()
     .then(() => {
-      logStartup(`ready — Kimmino ${app.getVersion()} (packaged: ${app.isPackaged})`);
+      logStartup(`ready — Kimmino ${app.getVersion()} (packaged: ${app.isPackaged}, commit: ${__KIMMINO_COMMIT__})`);
       if (process.platform === 'win32') app.setAppUserModelId('com.kimmino.browser');
       if (process.platform === 'darwin') {
         app.setAboutPanelOptions({ applicationName: 'Kimmino', applicationVersion: app.getVersion(), website: APP_HOMEPAGE });
       }
       kimmino.boot();
       bootCompleted = true;
+      armBootWatchdog(kimmino);
     })
     .catch((error: unknown) => {
       reportStartupError('boot', error);
@@ -353,3 +405,77 @@ if (!gotLock) {
   void isDev;
   void session;
 }
+
+/**
+ * If `ready` completes but no window is ever created, release the lock instead
+ * of squatting on the profile forever — that is what turns one failed launch
+ * into an app that never opens again.
+ */
+function armBootWatchdog(kimmino: KimminoApp): void {
+  const started = Date.now();
+  const poll = (): void => {
+    if (kimmino.windowCount > 0) return;
+    if (Date.now() - started > BOOT_WATCHDOG_MS) {
+      reportStartupError(
+        'boot watchdog',
+        new Error(`no window was created within ${Math.round(BOOT_WATCHDOG_MS / 1000)}s of startup`)
+      );
+      heartbeat.stop();
+      clearInstanceState();
+      app.exit(1);
+      return;
+    }
+    setTimeout(poll, 500).unref?.();
+  };
+  setTimeout(poll, 500).unref?.();
+}
+
+/** Last resort when the lock is held by a process we cannot identify. */
+async function askAboutUnknownHolder(): Promise<'restart' | 'quit'> {
+  try {
+    await app.whenReady();
+    const { response } = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Kimmino is already running',
+      message: 'Kimmino is already running, but no window appeared',
+      detail:
+        'A Kimmino process is holding this profile without showing a window. That usually means it was left behind by an earlier build or a crash. Restart it now?',
+      buttons: ['Restart Kimmino', 'Quit'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true
+    });
+    return response === 0 ? 'restart' : 'quit';
+  } catch (error) {
+    reportStartupError('already-running prompt', error);
+    return 'quit';
+  }
+}
+
+async function bootstrap(): Promise<void> {
+  const outcome = await acquireInstance(app.getVersion());
+  logStartup(`instance lock: ${outcome}`);
+
+  if (outcome === 'handoff') {
+    // A healthy instance with a window owns the profile and will focus itself.
+    app.quit();
+    return;
+  }
+
+  if (outcome === 'unknown') {
+    if ((await askAboutUnknownHolder()) === 'quit') {
+      app.quit();
+      return;
+    }
+    await terminateOtherInstances();
+    if (!(await retryLock())) {
+      reportStartupError('instance lock', new Error('the profile is still locked after a restart request'));
+      app.exit(1);
+      return;
+    }
+  }
+
+  startPrimary();
+}
+
+void bootstrap();
