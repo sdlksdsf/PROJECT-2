@@ -66,7 +66,7 @@ const OS_CARDS: Array<{
 ];
 
 const STEPS_WIN = [
-  ['Run the installer', 'Double-click Kimmino-Setup-1.0.0.exe. Windows SmartScreen may show a warning for new publishers — choose “More info → Run anyway”, or verify the SHA-256 checksum first.'],
+  ['Run the installer', 'Double-click Kimmino-1.0.0-win-x64.exe. Windows SmartScreen may show a warning for new publishers — choose “More info → Run anyway”, or verify the SHA-256 checksum first.'],
   ['Choose install location', 'Per-user install by default (%LOCALAPPDATA%\\Programs\\Kimmino) so no administrator prompt appears.'],
   ['Pick your profile', 'On first launch choose “New profile” or import from Chrome, Edge, Firefox, Brave or Opera.'],
   ['Make it default (optional)', 'Kimmino asks once. You can always change default browser from Windows Settings → Apps → Default apps.']
@@ -297,10 +297,11 @@ npm run package
               {
                 icon: Terminal,
                 title: 'Nothing happens when I launch it',
-    body: 'Unsigned builds can be blocked before any code runs: right-click the .exe → Properties → Unblock (or right-click the app and choose Open on macOS). Kimmino also writes every boot step to startup.log in its profile folder — Settings → About points at it — so a failed launch leaves a readable trace instead of silence.'
-  },
-  {
-    title: 'Linux sandbox error',
+                body: 'Unsigned builds can be blocked before any code runs: right-click the .exe → Properties → Unblock, or right-click the app and choose Open on macOS. Kimmino also records every boot step in startup.log inside its profile folder, so a failed launch leaves a readable trace instead of silence — the install guide lists the exact path.'
+              },
+              {
+                icon: ShieldCheck,
+                title: 'Linux sandbox error',
                 body: 'On distributions with restricted user namespaces run the AppImage with --no-sandbox, or enable kernel.unprivileged_userns_clone=1. The .deb sets this up automatically.'
               }
             ].map((item) => (
