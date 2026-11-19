@@ -1,11 +1,12 @@
-name: Deploy website
+name: Deploy website (GitHub Pages mirror)
+
+# The production site lives at https://kimmino.vercel.app (Vercel project
+# "kimmino"). This workflow is an *optional* mirror: it only runs when someone
+# triggers it by hand, because it needs Pages to be enabled first
+# (Settings → Pages → Source: GitHub Actions) and would otherwise fail the
+# branch with a configuration error it cannot fix itself.
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'website/**'
-      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
