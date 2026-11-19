@@ -91,8 +91,6 @@ jobs:
             browser/release/*.AppImage
             browser/release/*.deb
             browser/release/*.zip
-            browser/release/*.yml
-            browser/release/*.blockmap
           if-no-files-found: warn
           retention-days: 14
 
@@ -110,10 +108,7 @@ jobs:
 
       - name: Generate checksums
         run: |
-          cd artifacts
-          ls -la
-          sha256sum * > SHA256SUMS.txt || true
-          cat SHA256SUMS.txt
+          python3 tools/checksums.py artifacts
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2

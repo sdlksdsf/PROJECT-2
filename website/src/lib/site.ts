@@ -16,7 +16,7 @@ export const DOWNLOADS = {
   mac: `${SITE.releases}/download/Kimmino-1.0.0-mac-arm64.dmg`,
   macIntel: `${SITE.releases}/download/Kimmino-1.0.0-mac-x64.dmg`,
   linux: `${SITE.releases}/download/Kimmino-1.0.0-linux-x86_64.AppImage`,
-  linuxDeb: `${SITE.releases}/download/Kimmino-1.0.0-amd64.deb`
+  linuxDeb: `${SITE.releases}/download/kimmino_1.0.0_amd64.deb`
 };
 
 export type Platform = 'windows' | 'mac' | 'linux' | 'unknown';
