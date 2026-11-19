@@ -72,14 +72,14 @@ xattr -dr com.apple.quarantine /Applications/Kimmino.app
 ### AppImage (portable, recommended)
 
 ```bash
-chmod +x Kimmino-1.0.0-linux-x64.AppImage
-./Kimmino-1.0.0-linux-x64.AppImage
+chmod +x Kimmino-1.0.0-linux-x86_64.AppImage
+./Kimmino-1.0.0-linux-x86_64.AppImage
 ```
 
 Optional desktop integration:
 
 ```bash
-./Kimmino-1.0.0-linux-x64.AppImage --appimage-extract
+./Kimmino-1.0.0-linux-x86_64.AppImage --appimage-extract
 sudo mv squashfs-root /opt/kimmino
 sudo ln -s /opt/kimmino/AppRun /usr/local/bin/kimmino
 ```
@@ -126,7 +126,7 @@ Get-FileHash .\Kimmino-1.0.0-win-x64.exe -Algorithm SHA256
 
 ```bash
 shasum -a 256 Kimmino-1.0.0-*.dmg
-sha256sum Kimmino-1.0.0-linux-x64.AppImage
+sha256sum Kimmino-1.0.0-linux-x86_64.AppImage
 ```
 
 Compare the output with the matching line in the release's `SHA256SUMS.txt`. If it does not match, delete the file and download again — do not run it.

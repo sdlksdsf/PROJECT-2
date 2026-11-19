@@ -15,7 +15,7 @@ export const DOWNLOADS = {
   windowsArm: `${SITE.releases}/download/Kimmino-1.0.0-win-arm64.exe`,
   mac: `${SITE.releases}/download/Kimmino-1.0.0-mac-arm64.dmg`,
   macIntel: `${SITE.releases}/download/Kimmino-1.0.0-mac-x64.dmg`,
-  linux: `${SITE.releases}/download/Kimmino-1.0.0-linux-x64.AppImage`,
+  linux: `${SITE.releases}/download/Kimmino-1.0.0-linux-x86_64.AppImage`,
   linuxDeb: `${SITE.releases}/download/Kimmino-1.0.0-amd64.deb`
 };
 

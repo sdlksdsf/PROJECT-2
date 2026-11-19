@@ -64,7 +64,8 @@ Kimmino-1.0.0-win-x64.exe
 Kimmino-1.0.0-win-arm64.exe
 Kimmino-1.0.0-mac-arm64.dmg
 Kimmino-1.0.0-mac-x64.dmg
-Kimmino-1.0.0-linux-x64.AppImage
+Kimmino-1.0.0-linux-x86_64.AppImage
+Kimmino-1.0.0-linux-arm64.AppImage
 kimmino_1.0.0_amd64.deb
 latest.yml  (auto-update metadata)
 ```

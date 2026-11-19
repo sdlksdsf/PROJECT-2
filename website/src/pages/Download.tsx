@@ -79,8 +79,8 @@ const STEPS_MAC = [
 ];
 
 const STEPS_LINUX = [
-  ['Make it executable', 'chmod +x Kimmino-1.0.0-linux-x64.AppImage'],
-  ['Run it', './Kimmino-1.0.0-linux-x64.AppImage — or install the .deb with sudo apt install ./kimmino_1.0.0_amd64.deb'],
+  ['Make it executable', 'chmod +x Kimmino-1.0.0-linux-x86_64.AppImage'],
+  ['Run it', './Kimmino-1.0.0-linux-x86_64.AppImage — or install the .deb with sudo apt install ./kimmino_1.0.0_amd64.deb'],
   ['Wayland note', 'Run with --ozone-platform=wayland for native fractional scaling; XWayland works out of the box.']
 ];
 

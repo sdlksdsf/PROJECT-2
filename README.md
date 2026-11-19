@@ -199,7 +199,7 @@ Download the `.dmg` for your chip (Apple silicon or Intel), open it and drag Kim
 
 ```bash
 # portable
-chmod +x Kimmino-1.0.0-linux-x64.AppImage && ./Kimmino-1.0.0-linux-x64.AppImage
+chmod +x Kimmino-1.0.0-linux-x86_64.AppImage && ./Kimmino-1.0.0-linux-x86_64.AppImage
 
 # Debian / Ubuntu
 sudo apt install ./kimmino_1.0.0_amd64.deb

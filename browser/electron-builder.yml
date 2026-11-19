@@ -1,5 +1,6 @@
 appId: com.kimmino.browser
 productName: Kimmino
+executableName: Kimmino
 copyright: Copyright © 2026 Kimmino Contributors
 artifactName: Kimmino-${version}-${os}-${arch}.${ext}
 directories:
@@ -20,7 +21,7 @@ win:
   target:
     - target: nsis
       arch: [x64, arm64]
-  icon: resources/icon.png
+  icon: resources/icon.ico
   signtoolOptions:
     publisherName: Kimmino
 nsis:
@@ -30,8 +31,8 @@ nsis:
   createDesktopShortcut: always
   createStartMenuShortcut: true
   shortcutName: Kimmino
-  installerIcon: resources/icon.png
-  uninstallerIcon: resources/icon.png
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
   license: LICENSE.txt
 mac:
   target:
