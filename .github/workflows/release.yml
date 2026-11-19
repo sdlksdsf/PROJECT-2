@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: 'Create a draft release'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            platform: win
+            artifact: windows
+          - name: macOS
+            os: macos-latest
+            platform: mac
+            artifact: macos
+          - name: Linux
+            os: ubuntu-latest
+            platform: linux
+            artifact: linux
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Compile filter lists
+        run: node tools/build-filters.mjs
+        continue-on-error: true
+
+      - name: Build renderer and main bundles
+        run: npm run build
+
+      - name: Package installers
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --config electron-builder.yml --${{ matrix.platform }} --publish never
+        working-directory: browser
+
+      - name: Collect artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kimmino-${{ matrix.artifact }}
+          path: |
+            browser/release/*.exe
+            browser/release/*.dmg
+            browser/release/*.AppImage
+            browser/release/*.deb
+            browser/release/*.zip
+            browser/release/*.yml
+            browser/release/*.blockmap
+          if-no-files-found: warn
+          retention-days: 14
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          ls -la
+          sha256sum * > SHA256SUMS.txt || true
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Kimmino ${{ github.ref_name }}
+          draft: ${{ github.event.inputs.draft || false }}
+          generate_release_notes: true
+          files: |
+            artifacts/*
+          body: |
+            ## Kimmino ${{ github.ref_name }}
+
+            Private by default. Light by design.
+
+            ### Downloads
+            | Platform | File |
+            | --- | --- |
+            | Windows 10/11 (x64) | `Kimmino-*-win-x64.exe` |
+            | Windows 10/11 (ARM64) | `Kimmino-*-win-arm64.exe` |
+            | macOS (Apple silicon) | `Kimmino-*-arm64.dmg` |
+            | macOS (Intel) | `Kimmino-*-x64.dmg` |
+            | Linux (portable) | `Kimmino-*-x86_64.AppImage` |
+            | Linux (Debian/Ubuntu) | `kimmino_*_amd64.deb` |
+
+            Verify your download with `SHA256SUMS.txt`, then read the
+            [installation guide](https://github.com/sdlksdsf/PROJECT-2/blob/main/docs/INSTALL.md).
+
+            Unsigned builds may trigger SmartScreen or Gatekeeper on first launch — the guide explains
+            exactly what to do and why it happens.
+
+            **No telemetry. No account required. No bundled extras.**

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Kimmino">
+  <defs>
+    <linearGradient id="g" x1="4" y1="2" x2="44" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7c97ff"/>
+      <stop offset=".52" stop-color="#5b8dfb"/>
+      <stop offset="1" stop-color="#33d6a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="13" fill="url(#g)"/>
+  <path d="M17.4 12.6v22.8" stroke="#0a1220" stroke-width="4.1" stroke-linecap="round"/>
+  <path d="M33.8 11.6 25.6 23.6l8.2 12.8" stroke="#0a1220" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
