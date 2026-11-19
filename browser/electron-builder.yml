@@ -21,7 +21,8 @@ win:
     - target: nsis
       arch: [x64, arm64]
   icon: resources/icon.png
-  publisherName: Kimmino
+  signtoolOptions:
+    publisherName: Kimmino
 nsis:
   oneClick: false
   perMachine: false
