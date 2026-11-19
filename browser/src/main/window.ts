@@ -5,6 +5,7 @@ import type { ProfileRuntime } from './profile-runtime';
 import type { ContentRect, InternalPage, WindowState } from '../shared/types';
 import { internalUrl } from '../shared/types';
 import type { FilterEngine } from './privacy/engine';
+import { logStartup } from './log';
 
 export interface KimminoWindowOptions {
   runtime: ProfileRuntime;
@@ -79,8 +80,20 @@ export class KimminoWindow {
 
   private loadShell(): void {
     const { rendererUrl, rendererFile } = this.opts;
-    if (rendererUrl) void this.shell.webContents.loadURL(rendererUrl);
-    else void this.shell.webContents.loadFile(rendererFile);
+    const target = rendererUrl ?? rendererFile;
+    // A shell that never loads is a black window with no explanation, so both
+    // failure modes are logged and surfaced rather than swallowed.
+    this.shell.webContents.on('did-fail-load', (_event, code, description, url) => {
+      logStartup(`shell failed to load (${code} ${description}) ${url}`);
+    });
+    this.shell.webContents.on('render-process-gone', (_event, details) => {
+      logStartup(`shell renderer gone: ${details.reason} (exit ${details.exitCode})`);
+    });
+    this.shell.webContents.on('console-message', (_event, level, message, line, source) => {
+      if (level >= 2) logStartup(`shell console(${level}) ${source}:${line} ${message}`);
+    });
+    const loaded = rendererUrl ? this.shell.webContents.loadURL(rendererUrl) : this.shell.webContents.loadFile(rendererFile);
+    void loaded.catch((error: unknown) => logStartup(`shell load threw for ${target}: ${String(error)}`));
   }
 
   private wireWindowEvents(): void {

@@ -296,7 +296,11 @@ npm run package
               },
               {
                 icon: Terminal,
-                title: 'Linux sandbox error',
+                title: 'Nothing happens when I launch it',
+    body: 'Unsigned builds can be blocked before any code runs: right-click the .exe → Properties → Unblock (or right-click the app and choose Open on macOS). Kimmino also writes every boot step to startup.log in its profile folder — Settings → About points at it — so a failed launch leaves a readable trace instead of silence.'
+  },
+  {
+    title: 'Linux sandbox error',
                 body: 'On distributions with restricted user namespaces run the AppImage with --no-sandbox, or enable kernel.unprivileged_userns_clone=1. The .deb sets this up automatically.'
               }
             ].map((item) => (

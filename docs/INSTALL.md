@@ -172,4 +172,21 @@ Delete that folder to remove every trace. To erase browsing data but keep your p
 | Extensions do not load | Chromium extensions must be unpacked folders containing `manifest.json`; MV3 service-worker extensions are partial — see [EXTENSIONS.md](EXTENSIONS.md) |
 | High memory with many tabs | Settings → Performance → lower the freeze delay, enable Game mode |
 | Linux sandbox error | See [Sandbox note](#sandbox-note) |
-| Anything else | Open an [issue](https://github.com/sdlksdsf/PROJECT-2/issues) with your OS, version and the output of `kimmino --version` |
+| Nothing happens when you launch it | See [The app does not open](#the-app-does-not-open) — Kimmino writes `startup.log` for exactly this case |
+| Anything else | Open an [issue](https://github.com/sdlksdsf/PROJECT-2/issues) with your OS, the version shown in Settings → About, and `startup.log` if the app did not open |
+
+### The app does not open
+
+If double-clicking the app does nothing — no window, no error — work through this in order:
+
+1. **Check it is actually running.** Windows: Task Manager → Details → look for `Kimmino.exe`. macOS: is there a Kimmino dot in the Dock? If the process exists but no window appears, wait ten seconds, then read the log below.
+2. **SmartScreen.** An unsigned build can be blocked before any code runs. Right-click the `.exe` → *Properties* → tick *Unblock* → *OK*, then run it again. On macOS, right-click the app → *Open* → *Open* once.
+3. **Read `startup.log`.** Kimmino appends every boot step and every fatal error to a plain text file in its profile folder:
+   - Windows: `%APPDATA%\Kimmino\startup.log`
+   - macOS: `~/Library/Application Support/Kimmino/startup.log`
+   - Linux: `~/.config/Kimmino/startup.log`
+
+   The last line before the failure names the exact step that died, and fatal errors also raise a native message box pointing at this file.
+4. **Run it from a terminal** to see stderr directly: `"%LOCALAPPDATA%\Programs\Kimmino\Kimmino.exe"` (PowerShell), `open -a Kimmino` (macOS), or `./Kimmino-1.0.0-linux-x86_64.AppImage` (Linux).
+5. **Antivirus / corporate policy.** Some endpoint tools quarantine unsigned installers silently; check quarantine history.
+6. **Still stuck?** Open an [issue](https://github.com/sdlksdsf/PROJECT-2/issues) and attach `startup.log`.

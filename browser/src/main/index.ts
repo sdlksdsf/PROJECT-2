@@ -11,6 +11,7 @@ import { buildMenu } from './menu';
 import { internalUrl, type DeepPartial, type InternalPage, type Preferences } from '../shared/types';
 import { APP_HOMEPAGE } from '../shared/defaults';
 import type { FilterEngine } from './privacy/engine';
+import { logStartup, reportStartupError } from './log';
 
 /**
  * Kimmino bootstrap.
@@ -48,6 +49,29 @@ app.commandLine.appendSwitch(
 app.commandLine.appendSwitch('enable-features', 'BackForwardCache:TimeToLiveInBackForwardCache/0');
 
 app.setName('Kimmino');
+
+let bootCompleted = false;
+
+process.on('uncaughtException', (error) => {
+  reportStartupError('uncaught exception', error);
+  if (!bootCompleted) app.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  reportStartupError('unhandled rejection', reason);
+  if (!bootCompleted) app.exit(1);
+});
+
+// Privileged schemes must be declared before `ready`. Electron throws
+// "protocol.registerSchemesAsPrivileged should be called before app is ready"
+// if this happens later — which is exactly how a build dies with no window.
+try {
+  protocol.registerSchemesAsPrivileged([
+    { scheme: 'kimmino-asset', privileges: { standard: true, secure: true, supportFetchAPI: true, bypassCSP: true } }
+  ]);
+} catch (error) {
+  reportStartupError('register kimmino-asset scheme', error);
+}
 
 // Honour a hardware-acceleration opt-out before the GPU process is created.
 try {
@@ -92,15 +116,12 @@ class KimminoApp {
         app.quit();
       }
     });
+    logStartup(`boot ok — ${this.windows.size} window(s), filters: ${this.filters.stats().source}`);
   }
 
   private registerAssetProtocol(): void {
-    if (!protocol.isProtocolRegistered?.('kimmino-asset')) {
-      protocol.registerSchemesAsPrivileged([
-        { scheme: 'kimmino-asset', privileges: { standard: true, secure: true, supportFetchAPI: true, bypassCSP: true } }
-      ]);
-    }
-    app.whenReady().then(() => {
+    // The scheme itself is declared once, at module scope, before `ready`.
+    try {
       protocol.handle('kimmino-asset', (request) => {
         try {
           const url = new URL(request.url);
@@ -117,7 +138,9 @@ class KimminoApp {
           return new Response('Bad request', { status: 400 });
         }
       });
-    });
+    } catch (error) {
+      reportStartupError('serve kimmino-asset', error);
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -309,13 +332,21 @@ if (!gotLock) {
 } else {
   const kimmino = new KimminoApp();
 
-  app.whenReady().then(() => {
-    if (process.platform === 'win32') app.setAppUserModelId('com.kimmino.browser');
-    if (process.platform === 'darwin') {
-      app.setAboutPanelOptions({ applicationName: 'Kimmino', applicationVersion: app.getVersion(), website: APP_HOMEPAGE });
-    }
-    kimmino.boot();
-  });
+  app
+    .whenReady()
+    .then(() => {
+      logStartup(`ready — Kimmino ${app.getVersion()} (packaged: ${app.isPackaged})`);
+      if (process.platform === 'win32') app.setAppUserModelId('com.kimmino.browser');
+      if (process.platform === 'darwin') {
+        app.setAboutPanelOptions({ applicationName: 'Kimmino', applicationVersion: app.getVersion(), website: APP_HOMEPAGE });
+      }
+      kimmino.boot();
+      bootCompleted = true;
+    })
+    .catch((error: unknown) => {
+      reportStartupError('boot', error);
+      app.exit(1);
+    });
 
   // Focus the address bar when a new window opens on a supported platform.
   app.on('browser-window-focus', () => undefined);
