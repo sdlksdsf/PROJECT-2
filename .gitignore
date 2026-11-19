@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+.pnp.*
+.yarn/
+
+# builds
+out/
+dist/
+dist-electron/
+release/
+build/Release/
+*.tsbuildinfo
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# editor / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# logs
+npm-debug.log*
+yarn-error.log*
+*.log
+
+# test artefacts
+coverage/
+.arena/
+
+# generated font instances for the screenshot renderer (see tools/fonts-setup.sh)
+tools/.fonts/
+
+# python venv used by tooling
+.venv-tools/

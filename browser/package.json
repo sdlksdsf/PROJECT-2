@@ -1,0 +1,52 @@
+{
+  "name": "@kimmino/browser",
+  "productName": "Kimmino",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kimmino browser — fast, private, open source.",
+  "main": "./out/main/index.js",
+  "author": {
+    "name": "Kimmino Contributors",
+    "email": "dev@kimmino.app"
+  },
+  "license": "MPL-2.0",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:ui": "vite --config vite.web.config.ts",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "package": "electron-vite build && electron-builder --config electron-builder.yml --publish never",
+    "package:win": "electron-vite build && electron-builder --config electron-builder.yml --win --publish never",
+    "package:mac": "electron-vite build && electron-builder --config electron-builder.yml --mac --publish never",
+    "package:linux": "electron-vite build && electron-builder --config electron-builder.yml --linux --publish never"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "^5.2.5",
+    "@fontsource-variable/space-grotesk": "^5.2.5",
+    "@types/adm-zip": "^0.5.7",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "45.4.1",
+    "electron-builder": "^26.18.0",
+    "electron-vite": "^6.0.0",
+    "lucide-react": "^0.475.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0",
+    "zustand": "^5.0.3"
+  },
+  "homepage": "https://kimmino.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sdlksdsf/PROJECT-2.git",
+    "directory": "browser"
+  }
+}

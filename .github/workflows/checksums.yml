@@ -1,0 +1,37 @@
+name: Checksums
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to checksum'
+        required: true
+        default: v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  checksums:
+    name: Rebuild SHA256SUMS.txt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p artifacts
+          gh release download "${{ inputs.tag }}" --dir artifacts --clobber \
+            --pattern '*.exe' --pattern '*.dmg' --pattern '*.zip' \
+            --pattern '*.AppImage' --pattern '*.deb'
+
+      - name: Generate checksums
+        run: python3 tools/checksums.py artifacts
+
+      - name: Upload checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ inputs.tag }}" artifacts/SHA256SUMS.txt --clobber

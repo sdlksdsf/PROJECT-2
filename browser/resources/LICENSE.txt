@@ -1,0 +1,16 @@
+Kimmino — Mozilla Public License 2.0
+
+Copyright (c) 2026 Kimmino Contributors
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+distributed with this file, you can obtain one at https://mozilla.org/MPL/2.0/.
+
+Kimmino bundles Chromium and Electron (BSD-3-Clause / MIT), the Inter and Space
+Grotesk typefaces (SIL OFL 1.1), and filter lists from EasyList and uBlock Origin
+(GPLv3 / CC BY-SA). Their notices are reproduced in NOTICE.md and in the
+in-app About screen.
+
+This software is provided "as is", without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose and non-infringement.
