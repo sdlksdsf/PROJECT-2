@@ -5,7 +5,10 @@
   "private": true,
   "description": "Kimmino browser — fast, private, open source.",
   "main": "./out/main/index.js",
-  "author": "Kimmino Contributors",
+  "author": {
+    "name": "Kimmino Contributors",
+    "email": "dev@kimmino.app"
+  },
   "license": "MPL-2.0",
   "scripts": {
     "dev": "electron-vite dev",
@@ -39,5 +42,11 @@
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
     "zustand": "^5.0.3"
+  },
+  "homepage": "https://kimmino.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sdlksdsf/PROJECT-2.git",
+    "directory": "browser"
   }
 }
