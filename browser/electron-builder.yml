@@ -71,5 +71,7 @@ linux:
       Categories: Network;WebBrowser;Security;
       MimeType: text/html;x-scheme-handler/http;x-scheme-handler/https;
 appImage:
-  artifactName: Kimmino-${version}-${arch}.AppImage
+  artifactName: Kimmino-${version}-linux-${arch}.AppImage
+deb:
+  artifactName: kimmino_${version}_${arch}.deb
 publish: null

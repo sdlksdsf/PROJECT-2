@@ -132,6 +132,15 @@ export default function App() {
         state.focusOmnibox();
         return;
       }
+      if (meta && event.shiftKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        if (state.focusSession) state.stopFocus();
+        else {
+          state.startFocus(prefs.productivity.focusMode.minutes || 25);
+          state.toast('Focus mode on — distractions blocked until the timer ends', 'success');
+        }
+        return;
+      }
       if (meta && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         state.setUI({ findOpen: !state.findOpen });

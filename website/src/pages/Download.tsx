@@ -73,14 +73,14 @@ const STEPS_WIN = [
 ];
 
 const STEPS_MAC = [
-  ['Open the DMG', 'Mount Kimmino-1.0.0-arm64.dmg and drag Kimmino into Applications.'],
+  ['Open the DMG', 'Mount Kimmino-1.0.0-mac-arm64.dmg and drag Kimmino into Applications.'],
   ['First launch', 'If Gatekeeper blocks an unnotarised build, right-click → Open once, or run xattr -dr com.apple.quarantine /Applications/Kimmino.app.'],
   ['Import your data', 'The first-run wizard offers bookmarks, history and passwords from Safari, Chrome, Firefox and Brave.']
 ];
 
 const STEPS_LINUX = [
-  ['Make it executable', 'chmod +x Kimmino-1.0.0-x86_64.AppImage'],
-  ['Run it', './Kimmino-1.0.0-x86_64.AppImage — or install the .deb with sudo apt install ./kimmino_1.0.0_amd64.deb'],
+  ['Make it executable', 'chmod +x Kimmino-1.0.0-linux-x64.AppImage'],
+  ['Run it', './Kimmino-1.0.0-linux-x64.AppImage — or install the .deb with sudo apt install ./kimmino_1.0.0_amd64.deb'],
   ['Wayland note', 'Run with --ozone-platform=wayland for native fractional scaling; XWayland works out of the box.']
 ];
 

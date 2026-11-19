@@ -121,9 +121,9 @@ jobs:
             | --- | --- |
             | Windows 10/11 (x64) | `Kimmino-*-win-x64.exe` |
             | Windows 10/11 (ARM64) | `Kimmino-*-win-arm64.exe` |
-            | macOS (Apple silicon) | `Kimmino-*-arm64.dmg` |
-            | macOS (Intel) | `Kimmino-*-x64.dmg` |
-            | Linux (portable) | `Kimmino-*-x86_64.AppImage` |
+            | macOS (Apple silicon) | `Kimmino-*-mac-arm64.dmg` |
+            | macOS (Intel) | `Kimmino-*-mac-x64.dmg` |
+            | Linux (portable) | `Kimmino-*-linux-x64.AppImage` |
             | Linux (Debian/Ubuntu) | `kimmino_*_amd64.deb` |
 
             Verify your download with `SHA256SUMS.txt`, then read the

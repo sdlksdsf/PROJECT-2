@@ -105,9 +105,10 @@ It is also small. A browser should not be the reason you close a game. Backgroun
 
 - **Split view** — two `WebContentsView`s in one window, resizable divider, swap sides, independent focus.
 - **Command palette** (`Ctrl/⌘ K`) — fuzzy search across tabs, bookmarks, history and settings.
+- **Find bar** with match count and wrap-around, plus `Ctrl/⌘ G` for the next hit.
 - **Screenshots** — visible area or full page, PNG or JPEG, saved to `Pictures/Kimmino` with a timestamped filename.
 - **Bookmarks, dials and a real bookmarks bar**, history search with per-day grouping, and download management with pause/resume and "open containing folder".
-- **Reopen closed tab**, tab search, mute-all, picture-in-picture, zoom memory per site.
+- **Reopen closed tab**, vertical tabs, picture-in-picture, zoom memory per site, and a sidebar rail for the pages you live in.
 - **Import** from Chrome, Edge, Firefox, Brave, Opera and Vivaldi: bookmarks, history, passwords and preferences.
 
 ### Customisation
@@ -178,7 +179,7 @@ Read the full [privacy policy](docs/PRIVACY.md) — it is short, and every claim
 | Background CPU with 22 frozen tabs | ~0 % | 1–4 % |
 | Cold start | < 1 s | 2–5 s |
 
-Figures come from our 30-tab fixture profile on a 16 GB machine and will vary with page content — the honest way to check is the built-in task view (**Ctrl/⌘ Shift Esc**), which reports memory and CPU per tab. The switches that move these numbers live in **Settings → Performance**: memory saver, freeze delay, background throttle, game mode, hardware acceleration, page preloading (off).
+Figures come from our 30-tab fixture profile on a 16 GB machine and will vary with page content — the honest way to check is **Settings → Performance → Free memory now**, which reports what this profile is actually using, and **Settings → Developer → performance overlay** for live frame time. The switches that move these numbers live in **Settings → Performance**: memory saver, freeze delay, background throttle, game mode, hardware acceleration, page preloading (off).
 
 ---
 
@@ -245,10 +246,11 @@ Full details, including how to refresh filter lists offline and how the split-vi
 | `Ctrl/⌘ T` | New tab | | `Ctrl/⌘ K` | Command palette |
 | `Ctrl/⌘ W` | Close tab | | `Ctrl/⌘ Shift T` | Reopen closed tab |
 | `Ctrl/⌘ L` | Focus address bar | | `Ctrl/⌘ D` | Bookmark page |
-| `Ctrl/⌘ Shift N` | Private window | | `Ctrl/⌘ Shift S` | Screenshot |
+| `Ctrl/⌘ Shift N` | Private window | | `Ctrl/⌘ Shift S` | Screenshot (visible area) |
 | `Ctrl/⌘ Shift F` | Focus mode | | `Ctrl/⌘ Shift A` | AI panel |
-| `Ctrl/⌘ Shift M` | Mute all tabs | | `Ctrl/⌘ Shift Delete` | Erase browsing data |
-| `Alt ←/→` | Back / forward | | `F11` | Full screen |
+| `Ctrl/⌘ Alt S` | Split view | | `Ctrl/⌘ Shift Del` | Erase browsing data |
+| `Ctrl/⌘ H` | History | | `Ctrl/⌘ J` | Downloads |
+| `Ctrl/⌘ F` | Find in page | | `F12` | Developer tools |
 
 The full set — including split view, tab search and developer tools — is in [docs/SHORTCUTS.md](docs/SHORTCUTS.md). Everything is rebindable in **Settings → Shortcuts**.
 
