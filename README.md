@@ -193,7 +193,7 @@ Download `Kimmino-1.0.0-win-x64.exe` from [Releases](https://github.com/sdlksdsf
 
 ### macOS 12+
 
-Download the `.dmg` for your chip (Apple silicon or Intel), open it and drag Kimmino into Applications. Notarisation is configured in CI; for an unnotarised local build, right-click → **Open** once.
+Download the `.dmg` for your chip (Apple silicon or Intel), open it and drag Kimmino into Applications. Builds are unsigned and unnotarised, so macOS asks you to confirm on first launch: right-click → **Open** once.
 
 ### Linux
 

@@ -55,7 +55,7 @@ Per-machine installs work but are not the default because they need elevation; t
 
 1. Download `Kimmino-1.0.0-mac-arm64.dmg` (Apple silicon) or `Kimmino-1.0.0-mac-x64.dmg` (Intel).
 2. Open the image and drag **Kimmino** into **Applications**.
-3. Launch it from Applications. If macOS says the app cannot be opened because the developer cannot be verified, right-click the app → **Open** → **Open** once. This is Gatekeeper's standard behaviour for unnotarised builds; notarisation is configured in CI for signed releases.
+3. Launch it from Applications. If macOS says the app cannot be opened because the developer cannot be verified, right-click the app → **Open** → **Open** once. This is Gatekeeper's standard behaviour for unnotarised builds — CI produces unsigned installers, and signing certificates are not part of this release.
 
 Terminal alternative to clear the quarantine flag on a local build:
 

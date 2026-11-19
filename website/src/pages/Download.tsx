@@ -39,7 +39,7 @@ const OS_CARDS: Array<{
     primaryLabel: 'Windows installer (.exe)',
     secondary: DOWNLOADS.windowsArm,
     secondaryLabel: 'Windows on ARM',
-    note: 'Signed NSIS installer with per-user install, file associations and an uninstaller. No admin rights required.'
+    note: 'Unsigned NSIS installer with per-user install, file associations and an uninstaller. No admin rights required — see the SmartScreen note below.'
   },
   {
     id: 'mac',
@@ -50,13 +50,13 @@ const OS_CARDS: Array<{
     primaryLabel: 'macOS · Apple silicon (.dmg)',
     secondary: DOWNLOADS.macIntel,
     secondaryLabel: 'macOS · Intel',
-    note: 'Universal build, hardened runtime, notarised. Drag to Applications and launch.'
+    note: 'Separate Apple silicon and Intel builds, hardened runtime, unsigned. Drag to Applications, then right-click → Open once.'
   },
   {
     id: 'linux',
     name: 'Linux',
     icon: Terminal,
-    requirement: 'glibc 2.31+ · x86_64 · AppImage, deb or tarball',
+    requirement: 'glibc 2.31+ · x86_64 · AppImage or deb',
     primary: DOWNLOADS.linux,
     primaryLabel: 'AppImage (portable)',
     secondary: DOWNLOADS.linuxDeb,

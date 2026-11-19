@@ -138,10 +138,10 @@ npm run typecheck  # tsc --noEmit across both packages
 npm run package    # installers into browser/release`}</pre>
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.75, marginTop: 16 }}>
             <code className="inline">npm run package</code> invokes electron-builder and produces an NSIS <code className="inline">.exe</code>,
-            a notarisation-ready <code className="inline">.dmg</code>, an <code className="inline">AppImage</code> and a
+            an unsigned <code className="inline">.dmg</code>, an <code className="inline">AppImage</code> and a
             <code className="inline"> .deb</code>. Cross-format builds belong on CI — the workflow in{' '}
             <code className="inline">.github/workflows/release.yml</code> builds all three platforms on tag push and
-            attaches the artifacts to a draft release.
+            attaches the artifacts to a GitHub release, checksums included.
           </p>
           <p className="muted" style={{ fontSize: 15, lineHeight: 1.75, marginTop: 14 }}>
             Filter lists are compiled at build time by <code className="inline">tools/build-filters.mjs</code>, which
