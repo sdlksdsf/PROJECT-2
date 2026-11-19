@@ -120,11 +120,15 @@ export class KimminoWindow {
   }
 
   boot(restoreSession: boolean): void {
+    // Paint first, populate second: if restoring tabs throws, the user still gets
+    // a visible window (and a readable error) instead of an invisible process.
+    this.win.show();
+    logStartup('window shown');
     const restored = restoreSession ? this.tabs.restore() : false;
     if (!restored) this.tabs.create(internalUrl('newtab'), { active: true });
-    this.win.show();
     this.applyLayout();
     this.pushState();
+    logStartup(`window ready — ${restored ? 'session restored' : 'new tab'} (chrome ${process.versions.chrome})`);
   }
 
   /** Called by the renderer whenever the chrome layout changes size. */

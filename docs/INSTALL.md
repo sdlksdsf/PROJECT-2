@@ -177,16 +177,39 @@ Delete that folder to remove every trace. To erase browsing data but keep your p
 
 ### The app does not open
 
-If double-clicking the app does nothing — no window, no error — work through this in order:
+If double-clicking the app does nothing — no window, no error — it is almost always one of three things: an unsigned build blocked by the OS, a leftover process holding your profile, or a GPU driver crash. Work through this in order.
 
-1. **Check it is actually running.** Windows: Task Manager → Details → look for `Kimmino.exe`. macOS: is there a Kimmino dot in the Dock? If the process exists but no window appears, wait ten seconds, then read the log below.
+Kimmino never quits silently any more: if a launch cannot produce a window it either shows a native error box or writes the reason to `startup.log`. Both name the exact step that failed.
+
+1. **Look for a leftover process holding the profile.** Kimmino allows one instance per profile, so a copy that is still running (from a crash, a force-quit, or an older build) makes every new launch quit immediately.
+
+   ```powershell
+   Get-Process Kimmino -ErrorAction SilentlyContinue | Select-Object Id, StartTime, Path
+   Get-Process Kimmino -ErrorAction SilentlyContinue | Stop-Process -Force
+   ```
+
+   ```bash
+   # macOS / Linux
+   pgrep -fl Kimmino && pkill -f Kimmino
+   ```
+
+   Then start Kimmino again. If the app detects a process that holds the profile without showing a window, it now offers **Restart Kimmino** — that option does the same thing for you.
+
 2. **SmartScreen.** An unsigned build can be blocked before any code runs. Right-click the `.exe` → *Properties* → tick *Unblock* → *OK*, then run it again. On macOS, right-click the app → *Open* → *Open* once.
 3. **Read `startup.log`.** Kimmino appends every boot step and every fatal error to a plain text file in its profile folder:
    - Windows: `%APPDATA%\Kimmino\startup.log`
    - macOS: `~/Library/Application Support/Kimmino/startup.log`
    - Linux: `~/.config/Kimmino/startup.log`
 
-   The last line before the failure names the exact step that died, and fatal errors also raise a native message box pointing at this file.
+   It records the version, build commit, instance-lock decision, every window step and any fatal error — the last line names the exact step that died, and fatal errors also raise a native message box pointing at this file.
 4. **Run it from a terminal** to see stderr directly: `"%LOCALAPPDATA%\Programs\Kimmino\Kimmino.exe"` (PowerShell), `open -a Kimmino` (macOS), or `./Kimmino-1.0.0-linux-x86_64.AppImage` (Linux).
-5. **Antivirus / corporate policy.** Some endpoint tools quarantine unsigned installers silently; check quarantine history.
-6. **Still stuck?** Open an [issue](https://github.com/sdlksdsf/PROJECT-2/issues) and attach `startup.log`.
+5. **Try safe mode if the window never paints.** Some Windows 11 GPU drivers crash Chromium during startup:
+
+   ```powershell
+   & "$env:LOCALAPPDATA\Programs\Kimmino\Kimmino.exe" --safe-mode
+   ```
+
+   `--safe-mode` (or `KIMMINO_SAFE_MODE=1`) disables hardware acceleration for that launch. If it fixes the launch, turn acceleration off permanently in Settings → Performance.
+
+6. **Antivirus / corporate policy.** Some endpoint tools quarantine unsigned installers silently; check quarantine history.
+7. **Still stuck?** Open an [issue](https://github.com/sdlksdsf/PROJECT-2/issues) and attach `startup.log`.

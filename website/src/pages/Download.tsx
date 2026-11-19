@@ -297,7 +297,7 @@ npm run package
               {
                 icon: Terminal,
                 title: 'Nothing happens when I launch it',
-                body: 'Unsigned builds can be blocked before any code runs: right-click the .exe → Properties → Unblock, or right-click the app and choose Open on macOS. Kimmino also records every boot step in startup.log inside its profile folder, so a failed launch leaves a readable trace instead of silence — the install guide lists the exact path.'
+                body: 'Most often a leftover Kimmino process is still holding your profile, so every new launch quits at once — close it in Task Manager (or press Restart Kimmino when the app offers it), then relaunch. Otherwise: right-click the .exe → Properties → Unblock, try --safe-mode if your GPU driver crashes Chromium, and read startup.log in your profile folder — it records every boot step and the exact failure.'
               },
               {
                 icon: ShieldCheck,
