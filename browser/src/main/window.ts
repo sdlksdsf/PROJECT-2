@@ -49,8 +49,9 @@ export class KimminoWindow {
     this.normalBounds = { ...bounds };
     this.win = new BaseWindow({
       ...bounds,
-      minWidth: Math.min(720, area.width),
-      minHeight: Math.min(480, area.height),
+      // A minimum larger than the screen is its own way of getting stuck.
+      minWidth: Math.min(720, bounds.width),
+      minHeight: Math.min(480, bounds.height),
       show: false,
       frame: false,
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',

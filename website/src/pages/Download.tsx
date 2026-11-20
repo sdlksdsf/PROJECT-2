@@ -171,7 +171,7 @@ export function DownloadPage() {
           <Reveal>
             <p className="small muted" style={{ marginTop: 18, textAlign: 'center' }}>
               Check which build you have: <strong>Settings → About</strong> shows <code>Kimmino {SITE.version}</code>.
-              Anything earlier is the pre-theme release.
+              Anything older is missing these, and the window-fitting fix that came with them.
             </p>
           </Reveal>
         </div>
