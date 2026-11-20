@@ -76,3 +76,12 @@ test('no telemetry endpoints are referenced anywhere in the source', () => {
   walk(path.join(root, 'src'));
   assert.deepEqual(offenders, [], `telemetry endpoints found: ${offenders.join(', ')}`);
 });
+
+test('the assistant proxy keeps its keys on the server', () => {
+  const fn = fs.readFileSync(path.join(root, '..', 'website', 'api', 'ai.ts'), 'utf8');
+  assert.match(fn, /process\.env\.GEMINI_API_KEY/, 'the proxy must read its key from the environment');
+  assert.match(fn, /process\.env\.GROQ_API_KEY/);
+  // No key material in the function itself, and no browser-side key handling.
+  assert.doesNotMatch(fn, /AIza[0-9A-Za-z_-]{10,}/, 'no Google key may be committed');
+  assert.doesNotMatch(fn, /gsk_[0-9A-Za-z]{10,}/, 'no Groq key may be committed');
+});

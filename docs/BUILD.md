@@ -129,8 +129,9 @@ project with the environment variables above or a `cloud.json` in the profile
 folder. The same is true of the assistant: the browser only knows the proxy
 address, and the provider keys live on the server that serves `api/ai.ts`.
 
-To run that server locally: `vercel dev` at the repository root, then start the
-browser with `KIMMINO_AI_URL=http://localhost:3000/api/ai`.
+The function lives at `website/api/ai.ts`, because the Vercel project's root
+directory is `website`. To run it locally: `cd website && vercel dev`, then start
+the browser with `KIMMINO_AI_URL=http://localhost:3000/api/ai`.
 
 ## Troubleshooting the build
 
