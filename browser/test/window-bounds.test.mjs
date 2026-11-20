@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { centeredBounds, fitSize, fitsIn, restoreBounds, shouldStartMaximized } from '../src/main/window-bounds.ts';
+import { centeredBounds, fitSize, fitsIn, restoreBounds, shouldOpenMaximized, shouldStartMaximized } from '../src/main/window-bounds.ts';
 
 /**
  * The first 1.1.0 window opened at 1320×860 no matter what the screen was. On a
@@ -126,4 +126,20 @@ test('a viewport larger than the display is treated as a broken window', () => {
   const ipc = read('..', 'src', 'main', 'ipc.ts');
   assert.match(ipc, /window:viewport/);
   assert.match(ipc, /system:display-info/);
+});
+
+test('the first window after an install or update opens maximised', () => {
+  // No saved geometry: hand the placement to the window manager, whatever the
+  // reported work area says — that is the only measurement it cannot get wrong.
+  assert.equal(shouldOpenMaximized(false, LAPTOP), true);
+  assert.equal(shouldOpenMaximized(false, SMALL), true);
+  // A geometry this build saved itself is trusted, unless the screen is small.
+  assert.equal(shouldOpenMaximized(true, LAPTOP), false);
+  assert.equal(shouldOpenMaximized(true, SMALL), true);
+});
+
+test('geometry written by an older build is not restored', () => {
+  const state = read('..', 'src', 'main', 'window-state.ts');
+  assert.match(state, /WINDOW_STATE_SCHEMA = 2/);
+  assert.match(state, /state\.schema !== WINDOW_STATE_SCHEMA/);
 });

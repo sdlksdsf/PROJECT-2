@@ -16,7 +16,7 @@ Kimmino ships one installer per platform. Nothing runs in the background after i
 
 **Requirements:** Windows 10 1809 or newer (Windows 11 supported), 64-bit x64 or ARM64, 4 GB RAM, 300 MB free disk.
 
-1. Download `Kimmino-1.1.2-win-x64.exe` (or `-win-arm64.exe` on a Snapdragon/ARM device) from [Releases](https://github.com/sdlksdsf/PROJECT-2/releases/latest).
+1. Download `Kimmino-1.1.3-win-x64.exe` (or `-win-arm64.exe` on a Snapdragon/ARM device) from [Releases](https://github.com/sdlksdsf/PROJECT-2/releases/latest).
 2. Run it. Because early builds are not yet code-signed, SmartScreen may show **"Windows protected your PC"**.
    - Click **More info**, then **Run anyway**.
    - If you prefer certainty, follow [verifying your download](#verifying-your-download) first.
@@ -39,7 +39,7 @@ Kimmino asks once on first launch. Windows will open **Settings → Apps → Def
 
 ```powershell
 # silent install for all users of a machine
-Kimmino-1.1.2-win-x64.exe /S /D="C:\Program Files\Kimmino"
+Kimmino-1.1.3-win-x64.exe /S /D="C:\Program Files\Kimmino"
 
 # pre-seed a hardened profile
 kimmino.exe --profile fleet --policy hardened
@@ -53,7 +53,7 @@ Per-machine installs work but are not the default because they need elevation; t
 
 **Requirements:** macOS 12 Monterey or newer, Apple silicon or Intel, 300 MB free disk.
 
-1. Download `Kimmino-1.1.2-mac-arm64.dmg` (Apple silicon) or `Kimmino-1.1.2-mac-x64.dmg` (Intel).
+1. Download `Kimmino-1.1.3-mac-arm64.dmg` (Apple silicon) or `Kimmino-1.1.3-mac-x64.dmg` (Intel).
 2. Open the image and drag **Kimmino** into **Applications**.
 3. Launch it from Applications. If macOS says the app cannot be opened because the developer cannot be verified, right-click the app → **Open** → **Open** once. This is Gatekeeper's standard behaviour for unnotarised builds — CI produces unsigned installers, and signing certificates are not part of this release.
 
@@ -72,14 +72,14 @@ xattr -dr com.apple.quarantine /Applications/Kimmino.app
 ### AppImage (portable, recommended)
 
 ```bash
-chmod +x Kimmino-1.1.2-linux-x86_64.AppImage
-./Kimmino-1.1.2-linux-x86_64.AppImage
+chmod +x Kimmino-1.1.3-linux-x86_64.AppImage
+./Kimmino-1.1.3-linux-x86_64.AppImage
 ```
 
 Optional desktop integration:
 
 ```bash
-./Kimmino-1.1.2-linux-x86_64.AppImage --appimage-extract
+./Kimmino-1.1.3-linux-x86_64.AppImage --appimage-extract
 sudo mv squashfs-root /opt/kimmino
 sudo ln -s /opt/kimmino/AppRun /usr/local/bin/kimmino
 ```
@@ -87,7 +87,7 @@ sudo ln -s /opt/kimmino/AppRun /usr/local/bin/kimmino
 ### Debian / Ubuntu (.deb)
 
 ```bash
-sudo apt install ./kimmino_1.1.2_amd64.deb
+sudo apt install ./kimmino_1.1.3_amd64.deb
 ```
 
 The package installs to `/opt/Kimmino`, adds a launcher in the *Internet* category, and registers `x-scheme-handler/http` and `https` with `update-alternatives`.
@@ -119,14 +119,14 @@ Every release publishes `SHA256SUMS.txt` alongside the binaries.
 **Windows (PowerShell):**
 
 ```powershell
-Get-FileHash .\Kimmino-1.1.2-win-x64.exe -Algorithm SHA256
+Get-FileHash .\Kimmino-1.1.3-win-x64.exe -Algorithm SHA256
 ```
 
 **macOS / Linux:**
 
 ```bash
-shasum -a 256 Kimmino-1.1.2-*.dmg
-sha256sum Kimmino-1.1.2-linux-x86_64.AppImage
+shasum -a 256 Kimmino-1.1.3-*.dmg
+sha256sum Kimmino-1.1.3-linux-x86_64.AppImage
 ```
 
 Compare the output with the matching line in the release's `SHA256SUMS.txt`. If it does not match, delete the file and download again — do not run it.
@@ -173,14 +173,14 @@ Delete that folder to remove every trace. To erase browsing data but keep your p
 | High memory with many tabs | Settings → Performance → lower the freeze delay, enable Game mode |
 | Linux sandbox error | See [Sandbox note](#sandbox-note) |
 | Nothing happens when you launch it | See [The app does not open](#the-app-does-not-open) — Kimmino writes `startup.log` for exactly this case |
-| The window is bigger than the screen, so the buttons are missing | Press `Ctrl+Shift+M` to maximise (the window manager always fits a maximised window) or `Ctrl+Shift+Alt+R` to recentre. Settings → About → *Fit to screen*, Settings → Appearance → *Reset window* and `Kimmino --reset-window` do the same thing. 1.1.2 and later open maximised on displays where a floating window would be clipped |
+| The window is bigger than the screen, so the buttons are missing | Press `Ctrl+Shift+M` to maximise (the window manager always fits a maximised window) or `Ctrl+Shift+Alt+R` to recentre. Settings → About → *Fit to screen*, Settings → Appearance → *Reset window* and `Kimmino --reset-window` do the same thing. 1.1.3 and later open the first window maximised, so it is always exactly the screen |
 | Anything else | Open an [issue](https://github.com/sdlksdsf/PROJECT-2/issues) with your OS, the version shown in Settings → About, and `startup.log` if the app did not open |
 
 ### The window does not fit the screen
 
 Before 1.1.1 the window always opened at 1320×860. On a 1024×768 screen that pushed the close button, the right end of the tab strip and the bottom of the sidebar off screen, and no amount of dragging helped — there was no position where the window fitted.
 
-From 1.1.1 the window is sized and centred for the display it opens on, remembers that geometry, and re-fits itself when a monitor is added, removed or resized. From 1.1.2 it opens **maximised** on displays of 1366×820 or smaller, where a floating window would otherwise be clipped — a maximised window is fitted by the window manager, which stays correct even when a display reports the wrong size (scaling, virtualised DPI, a stale monitor list). The renderer also reports its own viewport, and if the window turns out to be larger than the display it is told about, it asks to be maximised rather than guessing a scale.
+From 1.1.1 the window is sized and centred for the display it opens on, remembers that geometry, and re-fits itself when a monitor is added, removed or resized. From 1.1.3 the **first** window after an install or an update opens maximised, and geometry saved by 1.1.3+ is reused afterwards. A maximised window is fitted by the window manager, which stays correct even when the display reports the wrong size (scaling, virtualised DPI, a stale monitor list) — the one thing the app cannot verify for itself. Windows of 1366×820 or smaller keep opening maximised after that too. The renderer also reports its own viewport, and if the window turns out to be larger than the display it is told about, it asks to be maximised rather than guessing a scale.
 
 If an older build is stuck like that, snap it with `Win+←` / `Win+→`, or press `Ctrl+Shift+M` on 1.1.1+, so the controls come back — then update. `Ctrl+Shift+Alt+R` recentres the window, and starting the app with `--reset-window` forgets the saved geometry entirely. Settings → About now shows the window size, the work area, the display scale and the viewport the interface actually got, which is what a bug report about a cut-off interface needs.
 
@@ -211,7 +211,7 @@ Kimmino never quits silently any more: if a launch cannot produce a window it ei
    - Linux: `~/.config/Kimmino/startup.log`
 
    It records the version, build commit, instance-lock decision, every window step and any fatal error — the last line names the exact step that died, and fatal errors also raise a native message box pointing at this file.
-4. **Run it from a terminal** to see stderr directly: `"%LOCALAPPDATA%\Programs\Kimmino\Kimmino.exe"` (PowerShell), `open -a Kimmino` (macOS), or `./Kimmino-1.1.2-linux-x86_64.AppImage` (Linux).
+4. **Run it from a terminal** to see stderr directly: `"%LOCALAPPDATA%\Programs\Kimmino\Kimmino.exe"` (PowerShell), `open -a Kimmino` (macOS), or `./Kimmino-1.1.3-linux-x86_64.AppImage` (Linux).
 5. **Try safe mode if the window never paints.** Some Windows 11 GPU drivers crash Chromium during startup:
 
    ```powershell

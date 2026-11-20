@@ -1,7 +1,7 @@
 import type { Preferences, ThemeDefinition } from './types';
 
 export const APP_NAME = 'Kimmino';
-export const APP_VERSION = '1.1.2';
+export const APP_VERSION = '1.1.3';
 export const APP_HOMEPAGE = 'https://kimmino.vercel.app';
 export const APP_REPO = 'https://github.com/sdlksdsf/PROJECT-2';
 export const PRIVACY_POLICY = 'https://kimmino.vercel.app/privacy';

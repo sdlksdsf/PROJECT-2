@@ -6,7 +6,7 @@ on:
       tag:
         description: 'Release tag to checksum'
         required: true
-        default: v1.1.2
+        default: v1.1.3
 
 permissions:
   contents: write

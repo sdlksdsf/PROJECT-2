@@ -7,7 +7,7 @@ import type { ContentRect, InternalPage, WindowState } from '../shared/types';
 import { internalUrl } from '../shared/types';
 import type { FilterEngine } from './privacy/engine';
 import { logStartup } from './log';
-import { centeredBounds, restoreBounds, shouldStartMaximized, type Rect } from './window-bounds';
+import { centeredBounds, restoreBounds, shouldOpenMaximized, type Rect } from './window-bounds';
 import { rememberWindowState } from './window-state';
 
 export interface KimminoWindowOptions {
@@ -100,7 +100,7 @@ export class KimminoWindow {
     // Small displays (and any screen whose reported size cannot be trusted) get
     // the OS-managed geometry instead of ours: a maximised window is fitted by
     // the window manager to the pixels that actually exist.
-    this.startMaximized = opts.maximized || shouldStartMaximized(area);
+    this.startMaximized = opts.maximized || shouldOpenMaximized(Boolean(opts.bounds), area);
     if (this.startMaximized) this.win.maximize();
   }
 

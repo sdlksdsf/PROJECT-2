@@ -126,7 +126,7 @@ export function createMockApi(): KimminoApi {
 
   const api: KimminoApi = {
     platform: 'web',
-    version: '1.1.2',
+    version: '1.1.3',
     isNative: false,
 
     window: {
@@ -436,15 +436,15 @@ export function createMockApi(): KimminoApi {
 
     updates: {
       state: async () => ({
-        current: '1.1.2',
-        latest: '1.1.2',
+        current: '1.1.3',
+        latest: '1.1.3',
         notesUrl: null,
         checkedAt: Date.now(),
         status: 'current'
       }),
       check: async () => ({
-        current: '1.1.2',
-        latest: '1.1.2',
+        current: '1.1.3',
+        latest: '1.1.3',
         notesUrl: null,
         checkedAt: Date.now(),
         status: 'current'
