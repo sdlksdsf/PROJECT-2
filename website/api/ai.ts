@@ -17,6 +17,8 @@ type Req = {
   method?: string;
   headers: Record<string, string | string[] | undefined>;
   body?: unknown;
+  url?: string;
+  query?: Record<string, string | string[] | undefined>;
 };
 
 type Res = {
@@ -63,6 +65,29 @@ export default async function handler(req: Req, res: Res): Promise<void> {
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();
+    return;
+  }
+  /**
+   * GET /api/ai?health=1 — says whether the keys are in place, without ever
+   * revealing them. This is how the desktop app (and anyone debugging a deploy)
+   * can tell "not configured" apart from "broken".
+   */
+  if (req.method === 'GET') {
+    const wantsHealth = req.query?.health !== undefined || (req.url ?? '').includes('health');
+    if (!wantsHealth) {
+      res.status(405).json({ error: 'Use POST, or GET ?health=1 to check configuration.' });
+      return;
+    }
+    const gemini = Boolean(process.env.GEMINI_API_KEY);
+    const groq = Boolean(process.env.GROQ_API_KEY);
+    res.status(200).json({
+      ok: gemini || groq,
+      gemini,
+      groq,
+      defaultModel: gemini ? DEFAULT_MODEL : groq ? 'llama-3.3-70b-versatile' : null,
+      models: { gemini: Array.from(GEMINI_MODELS), groq: Array.from(GROQ_MODELS) },
+      note: gemini || groq ? 'Ready.' : 'No provider key is set on this deployment.'
+    });
     return;
   }
   if (req.method !== 'POST') {
