@@ -46,7 +46,7 @@ It creates a profile that writes nothing to disk and uses a separate session par
 
 ### Why did the window open bigger than my screen?
 
-It always opened at 1320×860, which does not fit a 1024×768 display — the close button and part of the sidebar ended up off screen. 1.1.1 sizes the window for the display, remembers it between launches, and re-fits it whenever the monitor layout changes. If you are on an older build, `Win+←` snaps the window back into view so you can update, and `Ctrl+Shift+Alt+R` recentres it.
+It always opened at 1320×860, which does not fit a 1024×768 display — the close button and part of the sidebar ended up off screen. 1.1.2 opens maximised on displays of 1366×820 or smaller and sizes the window for the display everywhere else, then re-fits whenever the monitor layout or scaling changes. Press `Ctrl+Shift+M` to maximise on any build that is stuck, and `Ctrl+Shift+Alt+R` to recentre.
 
 ### Why does Windows warn about the installer?
 

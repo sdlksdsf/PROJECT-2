@@ -7,7 +7,7 @@ import type { ContentRect, InternalPage, WindowState } from '../shared/types';
 import { internalUrl } from '../shared/types';
 import type { FilterEngine } from './privacy/engine';
 import { logStartup } from './log';
-import { centeredBounds, restoreBounds, type Rect } from './window-bounds';
+import { centeredBounds, restoreBounds, shouldStartMaximized, type Rect } from './window-bounds';
 import { rememberWindowState } from './window-state';
 
 export interface KimminoWindowOptions {
@@ -38,6 +38,9 @@ export class KimminoWindow {
   /** Last geometry in the normal (not maximised, not full-screen) state. */
   private normalBounds: Rect;
   private saveTimer: NodeJS.Timeout | null = null;
+  private viewport: { innerWidth: number; innerHeight: number; availWidth: number; availHeight: number; devicePixelRatio: number } | null = null;
+  private viewportCorrected = false;
+  private startMaximized = false;
 
   constructor(private readonly opts: KimminoWindowOptions) {
     // A window larger than the screen puts the close button, the sidebar's lower
@@ -94,7 +97,11 @@ export class KimminoWindow {
     this.bindWindowShortcuts(this.shell.webContents);
     this.loadShell();
     this.wireWindowEvents();
-    if (opts.maximized) this.win.maximize();
+    // Small displays (and any screen whose reported size cannot be trusted) get
+    // the OS-managed geometry instead of ours: a maximised window is fitted by
+    // the window manager to the pixels that actually exist.
+    this.startMaximized = opts.maximized || shouldStartMaximized(area);
+    if (this.startMaximized) this.win.maximize();
   }
 
   private loadShell(): void {
@@ -216,6 +223,40 @@ export class KimminoWindow {
     }
   }
 
+  /**
+   * The renderer's own view of the world, in CSS pixels.
+   *
+   * `screen` in the main process can disagree with what is actually on screen
+   * (display scaling, virtualised DPI, a stale monitor list) — the renderer
+   * cannot: it knows its CSS viewport and the display it is drawn on. When the
+   * viewport is wider or taller than the display claims to be, the window is
+   * bigger than the monitor, so hand the problem to the window manager.
+   */
+  reportViewport(metrics: { innerWidth: number; innerHeight: number; availWidth: number; availHeight: number; devicePixelRatio: number }): void {
+    this.viewport = metrics;
+    logStartup(
+      `viewport ${Math.round(metrics.innerWidth)}x${Math.round(metrics.innerHeight)} css, ` +
+        `display ${Math.round(metrics.availWidth)}x${Math.round(metrics.availHeight)} css, dpr ${metrics.devicePixelRatio}`
+    );
+    if (this.viewportCorrected || this.destroyed) return;
+    const overflowX = metrics.innerWidth - metrics.availWidth;
+    const overflowY = metrics.innerHeight - metrics.availHeight;
+    if (overflowX > 2 || overflowY > 2) {
+      this.viewportCorrected = true;
+      // Scaling the window ourselves just trades one wrong guess for another
+      // (DPI virtualisation multiplies whatever we pass in). Maximising asks the
+      // OS to fill the screen, which is correct under every scaling arrangement.
+      if (!this.win.isMaximized()) this.win.maximize();
+      logStartup(`window was ${Math.round(overflowX)}x${Math.round(overflowY)} css px larger than the display — maximised to fit`);
+      this.applyLayout();
+    }
+  }
+
+  /** Diagnostics for Settings → About: what the app thinks the screen is. */
+  viewportMetrics(): typeof this.viewport {
+    return this.viewport;
+  }
+
   toggleMaximize(): void {
     if (this.win.isMaximized()) this.win.unmaximize();
     else this.win.maximize();
@@ -245,7 +286,10 @@ export class KimminoWindow {
     // Paint first, populate second: if restoring tabs throws, the user still gets
     // a visible window (and a readable error) instead of an invisible process.
     this.win.show();
-    logStartup('window shown');
+    // Maximising a window that has not been shown yet is a no-op on some window
+    // managers, so the intent is re-applied once it is on screen.
+    if (this.startMaximized && !this.win.isMaximized()) this.win.maximize();
+    logStartup(`window shown (${this.win.isMaximized() ? 'maximised' : `${this.win.getBounds().width}x${this.win.getBounds().height}`})`);
     const restored = restoreSession ? this.tabs.restore() : false;
     if (!restored) this.tabs.create(internalUrl('newtab'), { active: true });
     this.applyLayout();

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { centeredBounds, fitSize, fitsIn, restoreBounds } from '../src/main/window-bounds.ts';
+import { centeredBounds, fitSize, fitsIn, restoreBounds, shouldStartMaximized } from '../src/main/window-bounds.ts';
 
 /**
  * The first 1.1.0 window opened at 1320×860 no matter what the screen was. On a
@@ -103,4 +103,27 @@ test('the window is never created at a hard-coded size outside the fitted bounds
   const index = read('..', 'src', 'main', 'index.ts');
   assert.match(index, /display-metrics-changed/);
   assert.match(index, /--reset-window/);
+});
+
+test('small displays open maximised so the window manager does the fitting', () => {
+  // 1280-wide and 1024-tall work areas are exactly the displays where a floating
+  // window gets clipped if anything about the reported geometry is wrong.
+  assert.equal(shouldStartMaximized({ x: 0, y: 0, width: 1280, height: 984 }), true);
+  assert.equal(shouldStartMaximized({ x: 0, y: 0, width: 1024, height: 728 }), true);
+  assert.equal(shouldStartMaximized({ x: 0, y: 0, width: 1366, height: 738 }), true);
+  // Roomy screens keep the floating window.
+  assert.equal(shouldStartMaximized({ x: 0, y: 0, width: 1920, height: 1040 }), false);
+  assert.equal(shouldStartMaximized({ x: 0, y: 0, width: 1600, height: 860 }), false);
+});
+
+test('a viewport larger than the display is treated as a broken window', () => {
+  const source = read('..', 'src', 'main', 'window.ts');
+  // The renderer's CSS viewport is the ground truth; when it exceeds the display
+  // the window is asked to maximise rather than block-scaling a guess.
+  assert.match(source, /viewportCorrected = false/);
+  assert.match(source, /innerWidth - metrics\.availWidth/);
+  assert.match(source, /this\.win\.maximize\(\)/);
+  const ipc = read('..', 'src', 'main', 'ipc.ts');
+  assert.match(ipc, /window:viewport/);
+  assert.match(ipc, /system:display-info/);
 });

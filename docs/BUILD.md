@@ -60,13 +60,13 @@ npm run package:linux  # AppImage + .deb
 Artifacts land in `browser/release/`:
 
 ```
-Kimmino-1.1.1-win-x64.exe
-Kimmino-1.1.1-win-arm64.exe
-Kimmino-1.1.1-mac-arm64.dmg
-Kimmino-1.1.1-mac-x64.dmg
-Kimmino-1.1.1-linux-x86_64.AppImage
-Kimmino-1.1.1-linux-arm64.AppImage
-kimmino_1.1.1_amd64.deb
+Kimmino-1.1.2-win-x64.exe
+Kimmino-1.1.2-win-arm64.exe
+Kimmino-1.1.2-mac-arm64.dmg
+Kimmino-1.1.2-mac-x64.dmg
+Kimmino-1.1.2-linux-x86_64.AppImage
+Kimmino-1.1.2-linux-arm64.AppImage
+kimmino_1.1.2_amd64.deb
 latest.yml  (auto-update metadata)
 ```
 
