@@ -1,3 +1,4 @@
+import { AI_PROXY_URL, DEFAULT_AI_MODEL } from '../shared/defaults';
 import type { Preferences } from '../shared/types';
 
 /**
@@ -14,6 +15,8 @@ export interface AiRequest {
   pageText?: string;
   pageUrl?: string;
   pageTitle?: string;
+  /** Facts about the running browser: tabs, blocked counts, active settings. */
+  browserContext?: string;
 }
 
 const STOPWORDS = new Set(
@@ -60,13 +63,17 @@ export class AiService {
 
   private async remoteAnswer(request: AiRequest): Promise<string> {
     const prefs = this.prefs().productivity;
+    const context = prefs.aiPageContext && request.pageText
+      ? `Page the user is looking at (${request.pageUrl ?? ''}):\n"""\n${request.pageText.slice(0, 8000)}\n"""\n\n`
+      : '';
+    const system = [BROWSER_BRIEF, request.browserContext ?? ''].filter(Boolean).join('\n\n');
+
+    if (prefs.aiProvider === 'kimmino') {
+      return this.askProxy(system, `${context}${request.prompt}`);
+    }
+
     const endpoint = prefs.aiEndpoint.replace(/\/$/, '');
     if (!endpoint) throw new Error('no endpoint configured');
-    const context = request.pageText
-      ? `Context from the page the user is viewing (${request.pageUrl ?? ''}):\n"""\n${request.pageText.slice(0, 8000)}\n"""\n\n`
-      : '';
-    const system =
-      'You are Kimmino AI, a concise assistant inside the Kimmino browser. Answer in plain text, no markdown tables. Never invent facts about the page; if the context does not contain the answer, say so.';
 
     if (prefs.aiProvider === 'ollama') {
       const res = await fetch(`${endpoint}/api/chat`, {
@@ -101,6 +108,30 @@ export class AiService {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     return data.choices?.[0]?.message?.content ?? '(empty reply)';
+  }
+
+  /**
+   * Built-in assistant. The browser only knows the proxy's address; the
+   * provider keys stay on the server.
+   */
+  private async askProxy(system: string, message: string): Promise<string> {
+    const prefs = this.prefs().productivity;
+    const res = await fetch(process.env.KIMMINO_AI_URL || AI_PROXY_URL, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: prefs.aiModel || DEFAULT_AI_MODEL,
+        system,
+        messages: [{ role: 'user', content: message }]
+      })
+    });
+    if (!res.ok) {
+      const detail = (await res.text().catch(() => '')).slice(0, 200);
+      throw new Error(res.status === 429 ? 'too many questions right now' : `HTTP ${res.status} ${detail}`.trim());
+    }
+    const data = (await res.json()) as { text?: string; error?: string };
+    if (data.error) throw new Error(data.error);
+    return data.text?.trim() || '(empty reply)';
   }
 
   /** Rule-based, fully offline assistant. Small, honest, fast. */
@@ -150,7 +181,7 @@ export class AiService {
 
     return {
       ok: true,
-      text: 'I can help with the page you are on, with Kimmino settings, or with what was blocked. To unlock free-form chat, connect a model in Settings → AI (OpenAI, Ollama or any compatible endpoint).'
+      text: 'I can explain what this browser is doing: what it blocked, which settings are on, and where a control lives. Turn the assistant on in Settings → Kimmino AI for free-form answers.'
     };
   }
 }
@@ -197,3 +228,21 @@ export function topKeywords(text: string, count = 6): string[] {
     .slice(0, count)
     .map(([word]) => word);
 }
+
+/**
+ * What the assistant is told about Kimmino. Written as facts so a model can
+ * answer questions about the browser without guessing.
+ */
+export const BROWSER_BRIEF = [
+  'You are the assistant inside Kimmino, a desktop browser built on Chromium.',
+  'Answer in plain text without markdown tables. Be short. If you do not know something about the page, say so.',
+  '',
+  'What Kimmino is: an open-source browser for Windows, macOS and Linux, built on Chromium and Electron.',
+  'Privacy defaults: ad and tracker blocking from EasyList and uBlock Origin lists compiled into the app,',
+  'third-party cookies refused except on sign-in hosts, tracking parameters removed from navigations,',
+  'offline safe browsing, no telemetry and no crash reporting unless the user signs in for sync.',
+  'Interface: a left icon rail (bookmarks, history, downloads, extensions, themes, games), a tab strip at the top,',
+  'the address bar and shield badge in the toolbar, and a start page with a search box and speed dial.',
+  'Settings live at kimmino://settings and its search box jumps to any option.',
+  'Accounts are optional; signing in syncs bookmarks and settings only.'
+].join('\n');

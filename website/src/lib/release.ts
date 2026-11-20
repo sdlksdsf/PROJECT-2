@@ -20,6 +20,8 @@ const CHECKSUMS = `${SITE.releases}/download/SHA256SUMS.txt`;
 export interface ReleaseInfo {
   /** Release tag, once known (e.g. "v1.0.0"). */
   tag: string | null;
+  /** Asset file name → size in bytes, straight from the release that is live. */
+  assets: Record<string, number>;
   /** Human-readable publish time in UTC, once known. */
   publishedLabel: string | null;
   /** Always available: SHA-256 list next to the current release's assets. */
@@ -35,7 +37,7 @@ function formatUtc(date: Date): string {
 }
 
 export function useLatestRelease(): ReleaseInfo {
-  const [info, setInfo] = useState<ReleaseInfo>({ tag: null, publishedLabel: null, checksumsUrl: CHECKSUMS });
+  const [info, setInfo] = useState<ReleaseInfo>({ tag: null, assets: {}, publishedLabel: null, checksumsUrl: CHECKSUMS });
 
   useEffect(() => {
     let alive = true;
@@ -46,10 +48,19 @@ export function useLatestRelease(): ReleaseInfo {
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
       .then((data: unknown) => {
         if (!alive) return;
-        const payload = data as { tag_name?: unknown; published_at?: unknown };
+        const payload = data as {
+          tag_name?: unknown;
+          published_at?: unknown;
+          assets?: Array<{ name?: unknown; size?: unknown }>;
+        };
+        const assets: Record<string, number> = {};
+        for (const asset of payload.assets ?? []) {
+          if (typeof asset.name === 'string' && typeof asset.size === 'number') assets[asset.name] = asset.size;
+        }
         const published = typeof payload.published_at === 'string' ? new Date(payload.published_at) : null;
         setInfo({
           tag: typeof payload.tag_name === 'string' ? payload.tag_name : null,
+          assets,
           publishedLabel: published && !Number.isNaN(published.valueOf()) ? formatUtc(published) : null,
           checksumsUrl: CHECKSUMS
         });
@@ -67,4 +78,26 @@ export function useLatestRelease(): ReleaseInfo {
   }, []);
 
   return info;
+}
+
+/** 123 MB, not "123.4 MB" — the precision nobody needs. */
+export function formatBytes(bytes: number | undefined): string | null {
+  if (!bytes || bytes <= 0) return null;
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 100) return `${Math.round(mb)} MB`;
+  return `${mb.toFixed(1)} MB`;
+}
+
+/**
+ * Real installer sizes for the current release, keyed by the download URL's
+ * file name. Falls back to the measured Windows build so the page never shows a
+ * made-up number before the API answers.
+ */
+export const MEASURED_SIZES: Record<string, number> = {
+  'Kimmino-1.0.0-win-x64.exe': 123 * 1024 * 1024
+};
+
+export function sizeFor(url: string, assets: Record<string, number>): string | null {
+  const name = url.split('/').pop() ?? '';
+  return formatBytes(assets[name]) ?? formatBytes(MEASURED_SIZES[name]);
 }

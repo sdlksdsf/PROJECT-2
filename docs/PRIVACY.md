@@ -37,9 +37,9 @@ You can inspect this directory from **Settings → About → Open profile folder
 
 Sync is off by default and requires an account. If you turn it on:
 
-- You provide an email address. A six-digit code is emailed to you to verify it. No password is stored.
-- The items you choose to sync — bookmarks, preferences and dials — are serialised, encrypted in transit, and written to a table named `kimmino_sync`.
-- The sync backend is a Supabase project **you** configure through `KIMMINO_SUPABASE_URL` and `KIMMINO_SUPABASE_ANON_KEY`, or a `cloud.json` file in your profile folder. The Kimmino project does not operate a shared sync backend, so there is no central service holding user data.
+- You provide an email address and a password. The password is hashed by Supabase Auth (bcrypt) and never stored by the browser; only a session token is kept locally.
+- The items you choose to sync — bookmarks, preferences and dials — are encrypted in transit (TLS) and written to the `settings` and `bookmarks` tables, one row per user, enforced by row-level security that matches `auth.uid()`.
+- The default project is `cvprinxmfqguqezaylhk.supabase.co`, addressed with a **publishable** key that can do nothing beyond what RLS allows. Override it with `KIMMINO_SUPABASE_URL` / `KIMMINO_SUPABASE_ANON_KEY`, or a `cloud.json` in your profile folder, to use your own.
 - Sync payloads never include history, cookies, passwords, cache or page contents. You can delete synced rows at any time from **Settings → Sync → Delete cloud data**, or directly in Supabase.
 
 Setup instructions and the SQL schema are in [SYNC.md](SYNC.md).
@@ -50,7 +50,7 @@ kimmino.app is a static site. It sets no cookies, loads no scripts or fonts from
 
 ## 6. Third parties
 
-The only network requests Kimmino itself makes without your involvement are the pages you ask it to load and — if you enable Early Bird updates — a version check against GitHub Releases. Filter lists are downloaded at build time, not at runtime. There is no Kimmino CDN, no telemetry domain, no partner SDK.
+The only network requests Kimmino itself makes without your involvement are the pages you ask it to load and — if automatic updates are on, which is the default — a version check against GitHub Releases (the same public endpoint the download page reads; no identifier is sent). Asking the assistant a question sends that question, and the page context if you turned it on, to the Kimmino proxy, which forwards it to the selected model provider. Select "On-device only" and nothing leaves the machine. Filter lists are downloaded at build time, not at runtime. There is no Kimmino CDN, no telemetry domain, no partner SDK.
 
 ## 7. Children
 

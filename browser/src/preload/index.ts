@@ -8,10 +8,12 @@ import type {
   DeepPartial,
   DownloadItem,
   ExtensionInfo,
+  InstallResult,
   HistoryEntry,
   InternalPage,
   KimminoApi,
   Preferences,
+  UpdateState,
   ProfileSummary,
   SyncStatus,
   ThemeDefinition,
@@ -133,10 +135,17 @@ const api: KimminoApi = {
 
   extensions: {
     list: () => invoke<ExtensionInfo[]>('extensions:list'),
-    installFromFolder: () => invoke<ExtensionInfo | null>('extensions:install-folder'),
-    installFromUrl: (url: string) => invoke<ExtensionInfo | null>('extensions:install-url', url),
+    installFromFolder: () => invoke<InstallResult>('extensions:install-folder'),
+    installFromUrl: (url: string) => invoke<InstallResult>('extensions:install-url', url),
+    installFromFile: () => invoke<InstallResult>('extensions:install-file'),
     setEnabled: (id: string, enabled: boolean) => invoke<void>('extensions:set-enabled', id, enabled),
     remove: (id: string) => invoke<void>('extensions:remove', id)
+  },
+
+  updates: {
+    state: () => invoke<UpdateState>('updates:state'),
+    check: () => invoke<UpdateState>('updates:check'),
+    dismiss: (version: string) => invoke<Preferences | null>('updates:dismiss', version)
   },
 
   themes: {
@@ -150,8 +159,8 @@ const api: KimminoApi = {
 
   sync: {
     status: () => invoke<SyncStatus>('sync:status'),
-    signIn: (email: string) => invoke<{ ok: boolean; message: string }>('sync:sign-in', email),
-    verify: (email: string, token: string) => invoke<{ ok: boolean; message: string }>('sync:verify', email, token),
+    signIn: (email: string, password: string) => invoke<{ ok: boolean; message: string }>('sync:sign-in', email, password),
+    signUp: (email: string, password: string) => invoke<{ ok: boolean; message: string }>('sync:sign-up', email, password),
     signOut: () => invoke<void>('sync:sign-out'),
     syncNow: () => invoke<SyncStatus>('sync:now'),
     exportData: () => invoke<string>('sync:export'),

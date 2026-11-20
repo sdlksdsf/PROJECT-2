@@ -25,6 +25,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useStore } from '../store';
+import { useT } from '../lib/i18n';
 import { api, isNative } from '../bridge';
 import { useFreeze } from '../hooks';
 import { Omnibox } from './Omnibox';
@@ -36,6 +37,7 @@ export function Toolbar() {
   const openInternal = useStore((state) => state.openInternal);
   const toast = useStore((state) => state.toast);
   const [rating, setRating] = useState<{ score: number; level: string; reasons: string[] } | null>(null);
+  const t = useT();
 
   const activeTab = windowState.tabs.find((tab) => tab.id === windowState.activeId) ?? null;
   const isInternalPage = activeTab?.url.startsWith('kimmino://') ?? true;
@@ -58,13 +60,13 @@ export function Toolbar() {
 
   return (
     <div className="toolbar">
-      <button className="icon-btn" aria-label="Back" title="Back (Alt+←)" disabled={!activeTab?.canGoBack} onClick={() => api.tabs.back()}>
+      <button className="icon-btn" aria-label={t('toolbar.back')} title={`${t('toolbar.back')} (Alt+←)`} disabled={!activeTab?.canGoBack} onClick={() => api.tabs.back()}>
         <ArrowLeft size={17} />
       </button>
       <button
         className="icon-btn"
-        aria-label="Forward"
-        title="Forward (Alt+→)"
+        aria-label={t('toolbar.forward')}
+        title={`${t('toolbar.forward')} (Alt+→)`}
         disabled={!activeTab?.canGoForward}
         onClick={() => api.tabs.forward()}
       >
@@ -72,13 +74,13 @@ export function Toolbar() {
       </button>
       <button
         className="icon-btn"
-        aria-label={activeTab?.loading ? 'Stop' : 'Reload'}
-        title={activeTab?.loading ? 'Stop' : 'Reload (Ctrl+R)'}
+        aria-label={activeTab?.loading ? t('toolbar.stop') : t('toolbar.reload')}
+        title={activeTab?.loading ? t('toolbar.stop') : `${t('toolbar.reload')} (Ctrl+R)`}
         onClick={() => (activeTab?.loading ? api.tabs.stop() : api.tabs.reload())}
       >
         {activeTab?.loading ? <X size={16} /> : <RotateCw size={15} />}
       </button>
-      <button className="icon-btn" aria-label="Home" title="New tab (Alt+Home)" onClick={() => void api.tabs.create('kimmino://newtab')}>
+      <button className="icon-btn" aria-label={t('toolbar.newtab')} title={`${t('toolbar.newtab')} (Alt+Home)`} onClick={() => void api.tabs.create('kimmino://newtab')}>
         <Home size={16} />
       </button>
 

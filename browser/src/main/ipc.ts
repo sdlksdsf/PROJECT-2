@@ -6,13 +6,14 @@ import { importFromBrowser } from './importer';
 import { controlDownload, openDownload, revealDownload } from './downloads';
 import { rateSite } from './privacy/site-rating';
 import { internalUrl } from '../shared/types';
-import type { DeepPartial, InternalPage, Preferences } from '../shared/types';
+import type { DeepPartial, ExtensionInfo, InternalPage, Preferences } from '../shared/types';
 import type { KimminoWindow } from './window';
 import type { ProfileRuntime } from './profile-runtime';
 import type { FilterEngine } from './privacy/engine';
 import type { ProfileManager } from './profiles';
 import type { FiltersService } from './privacy/filters';
 import { ensureDir } from './store';
+import { applyLoginItem, checkForUpdates, updateState } from './app-level';
 
 export interface AppBridge {
   windowFor(event: IpcMainEvent | IpcMainInvokeEvent): KimminoWindow | null;
@@ -127,6 +128,7 @@ export function registerIpc(bridge: AppBridge): void {
     if (!runtime) return null;
     const next = runtime.prefs.set(patch);
     runtime.onPrefsChanged();
+    applyLoginItem(next.system.launchOnStartup);
     bridge.broadcast('prefs', next);
     return next;
   });
@@ -134,6 +136,7 @@ export function registerIpc(bridge: AppBridge): void {
     const runtime = rt(event);
     if (!runtime) return null;
     const next = runtime.prefs.reset(section);
+    applyLoginItem(next.system.launchOnStartup);
     bridge.broadcast('prefs', next);
     return next;
   });
@@ -175,13 +178,13 @@ export function registerIpc(bridge: AppBridge): void {
   handle('bookmarks:add', (event, input: { title: string; url: string; folder?: string }) => {
     const runtime = rt(event);
     const bookmark = runtime?.library.addBookmark(input);
-    runtime?.sync.markDirty('bookmarks');
+    runtime?.sync.markDirty();
     return bookmark;
   });
   handle('bookmarks:remove', (event, id: string) => {
     const runtime = rt(event);
     runtime?.library.removeBookmark(id);
-    runtime?.sync.markDirty('bookmarks');
+    runtime?.sync.markDirty();
   });
   handle('bookmarks:update', (event, id: string, patch) => rt(event)?.library.updateBookmark(id, patch));
 
@@ -209,24 +212,43 @@ export function registerIpc(bridge: AppBridge): void {
   handle('extensions:list', async (event) => (await rt(event)?.extensions.list()) ?? []);
   handle('extensions:install-folder', async (event) => {
     const runtime = rt(event);
-    if (!runtime) return null;
-    const info = await runtime.extensions.installFromFolder();
-    if (info) await runtime.extensions.syncInto(runtime.ses);
-    return info;
+    if (!runtime) return { ok: false, message: 'No profile', extension: null };
+    return installExtension(runtime, () => runtime.extensions.installFromFolder());
+  });
+  handle('extensions:install-file', async (event) => {
+    const runtime = rt(event);
+    if (!runtime) return { ok: false, message: 'No profile', extension: null };
+    return installExtension(runtime, () => runtime.extensions.installFromFile());
   });
   handle('extensions:install-url', async (event, url: string) => {
     const runtime = rt(event);
-    if (!runtime) return null;
-    const info = await runtime.extensions.installFromUrl(url);
-    if (info) await runtime.extensions.syncInto(runtime.ses);
-    return info;
+    if (!runtime) return { ok: false, message: 'No profile', extension: null };
+    return installExtension(runtime, () => runtime.extensions.installFromUrl(url));
   });
   handle('extensions:set-enabled', async (event, id: string, enabled: boolean) => {
     const runtime = rt(event);
-    await runtime?.extensions.setEnabled(id, enabled);
-    if (runtime) await runtime.extensions.syncInto(runtime.ses);
+    if (!runtime) return;
+    await runtime.extensions.setEnabled(id, enabled);
+    await runtime.extensions.syncInto(runtime.ses);
   });
-  handle('extensions:remove', async (event, id: string) => rt(event)?.extensions.remove(id));
+  handle('extensions:remove', async (event, id: string) => {
+    const runtime = rt(event);
+    if (!runtime) return;
+    await runtime.extensions.remove(id);
+    await runtime.extensions.syncInto(runtime.ses);
+  });
+
+  /* ---------------------------- updates --------------------------- */
+  handle('updates:state', () => updateState());
+  handle('updates:check', async (event) => {
+    const runtime = rt(event);
+    return checkForUpdates(runtime?.prefs.all() ?? ({} as Preferences), { interactive: true });
+  });
+  handle('updates:dismiss', (event, version: string) => {
+    const runtime = rt(event);
+    if (!runtime) return null;
+    return runtime.prefs.set({ updates: { dismissedVersion: version } });
+  });
 
   /* ---------------------------- themes ---------------------------- */
   handle('themes:list', (event) => rt(event)?.themes.list() ?? []);
@@ -251,9 +273,11 @@ export function registerIpc(bridge: AppBridge): void {
 
   /* ----------------------------- sync ----------------------------- */
   handle('sync:status', (event) => rt(event)?.sync.statusOf());
-  handle('sync:sign-in', async (event, email: string) => (await rt(event)?.sync.signIn(email)) ?? { ok: false, message: 'No profile' });
-  handle('sync:verify', async (event, email: string, token: string) =>
-    (await rt(event)?.sync.verify(email, token)) ?? { ok: false, message: 'No profile' }
+  handle('sync:sign-in', async (event, email: string, password: string) =>
+    (await rt(event)?.sync.signIn(email, password)) ?? { ok: false, message: 'No profile' }
+  );
+  handle('sync:sign-up', async (event, email: string, password: string) =>
+    (await rt(event)?.sync.signUp(email, password)) ?? { ok: false, message: 'No profile' }
   );
   handle('sync:sign-out', async (event) => rt(event)?.sync.signOut());
   handle('sync:now', async (event) => (await rt(event)?.sync.syncNow()) ?? null);
@@ -298,7 +322,7 @@ export function registerIpc(bridge: AppBridge): void {
     const runtime = rt(event);
     if (!runtime) return { ok: false, bookmarks: 0, message: 'No profile' };
     const result = await importFromBrowser(runtime.library);
-    runtime.sync.markDirty('bookmarks');
+    runtime.sync.markDirty();
     return result;
   });
 
@@ -389,4 +413,28 @@ async function readActivePageText(win: KimminoWindow | null): Promise<string> {
   } catch {
     return '';
   }
+}
+
+/**
+ * Install then actually load. Installing alone is not enough: Chromium only
+ * loads extensions when asked, so a silent failure here looks like "it did
+ * nothing" — the result says exactly what happened.
+ */
+async function installExtension(
+  runtime: ProfileRuntime,
+  installer: () => Promise<ExtensionInfo | null>
+): Promise<{ ok: boolean; message: string; extension: ExtensionInfo | null }> {
+  let info: ExtensionInfo | null = null;
+  try {
+    info = await installer();
+  } catch (err) {
+    return { ok: false, message: (err as Error).message, extension: null };
+  }
+  if (!info) return { ok: false, message: 'Cancelled.', extension: null };
+  const report = await runtime.extensions.syncInto(runtime.ses);
+  if (report.failed.some((failure) => failure.id === info!.id)) {
+    const failure = report.failed.find((item) => item.id === info!.id)!;
+    return { ok: false, message: `${info.name} installed but Chromium refused to load it: ${failure.error}`, extension: { ...info, status: 'error', error: failure.error } };
+  }
+  return { ok: true, message: `${info.name} is installed and running.`, extension: { ...info, status: 'running', error: null } };
 }

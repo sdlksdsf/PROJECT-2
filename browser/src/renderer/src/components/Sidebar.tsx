@@ -1,16 +1,16 @@
 import { Blocks, Camera, Clock, Download, Focus, History, Palette, Settings, ShieldOff, Sparkles, Star, X } from 'lucide-react';
 import { useStore } from '../store';
+import { useT } from '../lib/i18n';
 import { api, isNative } from '../bridge';
 import { TabIcon } from './TabIcon';
 import type { InternalPage } from '@shared/types';
 
-const RAIL_ITEMS: Array<{ page: InternalPage; icon: React.ReactNode; label: string }> = [
-  { page: 'bookmarks', icon: <Star size={17} />, label: 'Bookmarks' },
-  { page: 'history', icon: <History size={17} />, label: 'History' },
-  { page: 'downloads', icon: <Download size={17} />, label: 'Downloads' },
-  { page: 'extensions', icon: <Blocks size={17} />, label: 'Extensions' },
-  { page: 'themes', icon: <Palette size={17} />, label: 'Themes' },
-  { page: 'passwords', icon: <ShieldOff size={17} />, label: 'Passwords' }
+const RAIL_ITEMS: Array<{ page: InternalPage; icon: React.ReactNode; labelKey: 'nav.bookmarks' | 'nav.history' | 'nav.downloads' | 'nav.extensions' | 'nav.themes' }> = [
+  { page: 'bookmarks', icon: <Star size={17} />, labelKey: 'nav.bookmarks' },
+  { page: 'history', icon: <History size={17} />, labelKey: 'nav.history' },
+  { page: 'downloads', icon: <Download size={17} />, labelKey: 'nav.downloads' },
+  { page: 'extensions', icon: <Blocks size={17} />, labelKey: 'nav.extensions' },
+  { page: 'themes', icon: <Palette size={17} />, labelKey: 'nav.themes' }
 ];
 
 export function Sidebar() {
@@ -21,13 +21,14 @@ export function Sidebar() {
   const aiOpen = useStore((state) => state.aiOpen);
   const focusSession = useStore((state) => state.focusSession);
   const startFocus = useStore((state) => state.startFocus);
+  const t = useT();
 
   return (
     <div className="rail">
       <button
         className="rail-btn"
-        title={`${profile?.name ?? 'Profile'} — profiles & sync`}
-        aria-label="Profile"
+        title={`${profile?.name ?? t('nav.profile')} — profiles & sync`}
+        aria-label={t('nav.profile')}
         onClick={() => setUI({ profileMenuOpen: true })}
         style={{ marginBottom: 4 }}
       >
@@ -43,8 +44,8 @@ export function Sidebar() {
         <button
           key={item.page}
           className={`rail-btn ${internalPage === item.page ? 'is-active' : ''}`}
-          title={item.label}
-          aria-label={item.label}
+          title={t(item.labelKey)}
+          aria-label={t(item.labelKey)}
           onClick={() => void openInternal(item.page)}
         >
           {item.icon}

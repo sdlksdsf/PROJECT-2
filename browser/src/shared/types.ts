@@ -95,11 +95,10 @@ export interface Preferences {
     wallpaperDim: number;
     liveWallpaper: boolean;
     showClock: boolean;
-    showWeather: boolean;
     showSuggestions: boolean;
-    showNews: boolean;
-    layout: 'center' | 'left' | 'spread';
     searchPosition: { x: number; y: number } | null;
+    /** Tile size for the speed dial, so the start page fits any screen. */
+    tileSize: 'small' | 'medium' | 'large';
     dials: Array<{ id: string; title: string; url: string; icon: string | null }>;
   };
 
@@ -121,7 +120,6 @@ export interface Preferences {
     doNotTrack: boolean;
     safeBrowsing: boolean;
     blockPopups: boolean;
-    telemetry: boolean;
     strictMode: boolean;
   };
 
@@ -132,7 +130,6 @@ export interface Preferences {
     backgroundThrottle: boolean;
     gamingMode: boolean;
     hardwareAcceleration: boolean;
-    preloadPages: boolean;
   };
 
   // Search
@@ -154,9 +151,12 @@ export interface Preferences {
     videoEnhancer: boolean;
     forceDarkMode: boolean;
     aiEnabled: boolean;
-    aiProvider: 'off' | 'openai' | 'ollama' | 'custom';
+    /** `kimmino` uses the built-in proxy; the rest are self-hosted or BYO endpoints. */
+    aiProvider: 'off' | 'kimmino' | 'openai' | 'ollama' | 'custom';
     aiEndpoint: string;
     aiModel: string;
+    /** Send the current page (URL, title, visible text) with a question. Off by default. */
+    aiPageContext: boolean;
     earlyBird: boolean;
   };
 
@@ -168,13 +168,18 @@ export interface Preferences {
     downloadDir: string;
     askWhereToSave: boolean;
     spellcheck: boolean;
-    syncEnabled: boolean;
+  };
+
+  // Updates & extras
+  updates: {
+    automatic: boolean;
+    /** Version the user dismissed, so the banner does not reappear. */
+    dismissedVersion: string | null;
   };
 
   // Developer
   developer: {
     devToolsEnabled: boolean;
-    enableRemoteDebugging: boolean;
     customUserAgent: string;
     showPerfOverlay: boolean;
   };
@@ -222,6 +227,20 @@ export interface DownloadItem {
   paused: boolean;
 }
 
+export interface UpdateState {
+  current: string;
+  latest: string | null;
+  notesUrl: string | null;
+  checkedAt: number | null;
+  status: 'idle' | 'checking' | 'current' | 'available' | 'offline';
+}
+
+export interface InstallResult {
+  ok: boolean;
+  message: string;
+  extension: ExtensionInfo | null;
+}
+
 export interface ExtensionInfo {
   id: string;
   name: string;
@@ -232,6 +251,9 @@ export interface ExtensionInfo {
   icon: string | null;
   permissions: string[];
   manifestVersion: number;
+  /** running = Chromium has it loaded; error = it is installed but did not load. */
+  status?: 'running' | 'idle' | 'error';
+  error?: string | null;
 }
 
 export interface ThemeDefinition {
@@ -379,10 +401,17 @@ export interface KimminoApi {
 
   extensions: {
     list(): Promise<ExtensionInfo[]>;
-    installFromFolder(): Promise<ExtensionInfo | null>;
-    installFromUrl(url: string): Promise<ExtensionInfo | null>;
+    installFromFolder(): Promise<InstallResult>;
+    installFromUrl(url: string): Promise<InstallResult>;
+    installFromFile(): Promise<InstallResult>;
     setEnabled(id: string, enabled: boolean): Promise<void>;
     remove(id: string): Promise<void>;
+  };
+
+  updates: {
+    state(): Promise<UpdateState>;
+    check(): Promise<UpdateState>;
+    dismiss(version: string): Promise<Preferences | null>;
   };
 
   themes: {
@@ -396,8 +425,8 @@ export interface KimminoApi {
 
   sync: {
     status(): Promise<SyncStatus>;
-    signIn(email: string): Promise<{ ok: boolean; message: string }>;
-    verify(email: string, token: string): Promise<{ ok: boolean; message: string }>;
+    signIn(email: string, password: string): Promise<{ ok: boolean; message: string }>;
+    signUp(email: string, password: string): Promise<{ ok: boolean; message: string }>;
     signOut(): Promise<void>;
     syncNow(): Promise<SyncStatus>;
     exportData(): Promise<string>;

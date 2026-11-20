@@ -100,7 +100,7 @@ body,
 
 body {
   font-family: var(--font-ui);
-  font-size: calc(13.5px * var(--ui-scale, 1));
+  font-size: 13.5px;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;

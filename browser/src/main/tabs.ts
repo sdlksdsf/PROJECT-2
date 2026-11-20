@@ -61,6 +61,9 @@ const CONTEXT_MENU_ITEMS = [
   { id: 'inspector', label: 'Inspect element' }
 ];
 
+/** Hosts where HTTPS-only was proved wrong during this session. */
+const httpsFallbacks = new Set<string>();
+
 export class TabManager {
   readonly tabs = new Map<string, Tab>();
   order: string[] = [];
@@ -133,7 +136,9 @@ export class TabManager {
         sandbox: true,
         webSecurity: true,
         spellcheck: prefs.system.spellcheck,
-        backgroundThrottling: prefs.performance.backgroundThrottle,
+        // Gaming mode promises untouched frame rates in another window, so it
+        // overrides background throttling.
+        backgroundThrottling: prefs.performance.backgroundThrottle && !prefs.performance.gamingMode,
         safeDialogs: true,
         additionalArguments: [
           `--kimmino-config=${encodeURIComponent(
@@ -206,6 +211,22 @@ export class TabManager {
 
     wc.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
       if (!isMainFrame || errorCode === -3) return;
+      // HTTPS-only upgraded this navigation and TLS failed, which means the site
+      // is plain HTTP. Go back to it once instead of showing a dead end, and
+      // remember the host so the rest of the session is not bounced again.
+      if (this.opts.prefs().privacy.httpsOnly && validatedURL.startsWith('https://')) {
+        try {
+          const host = new URL(validatedURL).hostname;
+          if (!httpsFallbacks.has(host) && errorCode !== -105 /* name not resolved */) {
+            httpsFallbacks.add(host);
+            tab.loading = false;
+            void wc.loadURL(`http://${validatedURL.slice('https://'.length)}`);
+            return;
+          }
+        } catch {
+          /* fall through to the error page */
+        }
+      }
       tab.loading = false;
       void this.showErrorPage(tab, validatedURL, errorCode, errorDescription);
     });
@@ -573,7 +594,9 @@ export class TabManager {
 
   runMemorySaver(): void {
     const prefs = this.opts.prefs();
-    if (!prefs.performance.memorySaver) return;
+    // Gaming mode keeps every tab live: discarding a tab mid-session is exactly
+    // what makes an alt-tab feel broken.
+    if (!prefs.performance.memorySaver || prefs.performance.gamingMode) return;
     const limitMs = Math.max(1, prefs.performance.memorySaverMinutes) * 60_000;
     const now = Date.now();
     for (const tab of this.tabs.values()) {

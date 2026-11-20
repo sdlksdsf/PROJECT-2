@@ -1,6 +1,7 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Image as ImageIcon, LayoutGrid, Monitor, Plus, Search, ShieldCheck, Sparkles, Trash2, Wand2 } from 'lucide-react';
 import { useStore, wallpapers } from '../store';
+import { useT } from '../lib/i18n';
 import { api, isNative } from '../bridge';
 import { useClock, useKeySound } from '../hooks';
 import { domainLabel, faviconFor, gradientFor, greeting, hostOf, letterOf } from '../lib/url';
@@ -19,6 +20,8 @@ export function StartPage() {
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newUrl, setNewUrl] = useState('');
+  const [newError, setNewError] = useState('');
+  const t = useT();
   const searchWrap = useRef<HTMLDivElement>(null);
   const startRef = useRef<HTMLDivElement>(null);
 
@@ -43,6 +46,46 @@ export function StartPage() {
   const updateDials = async (dials: typeof prefs.startPage.dials) => {
     await setPrefs({ startPage: { dials } });
   };
+
+  const addSite = async () => {
+    const raw = newUrl.trim();
+    if (!raw) {
+      setNewError('Enter an address, like example.com');
+      return;
+    }
+    const url = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`;
+    try {
+      const parsed = new URL(url);
+      if (!parsed.hostname.includes('.')) throw new Error('no host');
+    } catch {
+      setNewError('That does not look like a web address.');
+      return;
+    }
+    if (prefs.startPage.dials.some((dial) => dial.url === url)) {
+      setNewError('That site is already on the start page.');
+      return;
+    }
+    await updateDials([
+      ...prefs.startPage.dials,
+      { id: `d_${Date.now().toString(36)}`, title: newTitle.trim() || domainLabel(url), url, icon: null }
+    ]);
+    setAdding(false);
+    setNewTitle('');
+    setNewUrl('');
+    setNewError('');
+  };
+
+  useEffect(() => {
+    if (!adding) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setAdding(false);
+        setNewError('');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [adding]);
 
   const submit = async () => {
     if (!query.trim()) return;
@@ -113,7 +156,7 @@ export function StartPage() {
               <span className="engine-badge">{engine.name.slice(0, 1)}</span>
               <input
                 value={query}
-                placeholder={`Search ${engine.name} or type a URL`}
+                placeholder={`${t('start.search')} — ${engine.name}`}
                 aria-label="Search"
                 spellCheck={false}
                 onChange={(event) => {
@@ -135,7 +178,9 @@ export function StartPage() {
             </div>
           </div>
 
-          <div className="dials">
+          <div
+            className={`dials ${prefs.startPage.tileSize === 'small' ? 'dials-sm' : prefs.startPage.tileSize === 'large' ? 'dials-lg' : ''}`}
+          >
             {prefs.startPage.dials.map((dial, index) => {
               const src = dial.icon || faviconFor(dial.url);
               return (
@@ -193,56 +238,103 @@ export function StartPage() {
               );
             })}
 
-            {adding ? (
-              <div className="dial">
-                <div className="dial-tile" style={{ background: 'rgba(255,255,255,.94)', flexDirection: 'column', gap: 4, padding: 6 }}>
+            <button
+              className="dial dial-add"
+              onClick={() => {
+                setAdding(true);
+                setNewError('');
+              }}
+              title={t('start.addSite')}
+            >
+              <span className="dial-tile">
+                <Plus size={22} />
+              </span>
+              <span className="dial-label">{t('start.addSite')}</span>
+            </button>
+          </div>
+
+          {adding && (
+            <div className="add-site-backdrop" role="presentation" onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                setAdding(false);
+                setNewError('');
+              }
+            }}>
+              <form
+                className="add-site-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-label={t('start.addSite')}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void addSite();
+                }}
+              >
+                <div className="add-site-head">
+                  <span className="add-site-title">{t('start.addSite')}</span>
+                  <button type="button" className="add-site-close" aria-label="Close" onClick={() => setAdding(false)}>
+                    ×
+                  </button>
+                </div>
+                <label className="add-site-field">
+                  <span>Name</span>
                   <input
                     autoFocus
                     value={newTitle}
-                    placeholder="Name"
+                    placeholder="Optional — the address is used if empty"
                     onChange={(event) => setNewTitle(event.target.value)}
-                    onKeyDown={(event) => event.stopPropagation()}
-                    style={{ width: '100%', border: 0, outline: 'none', fontSize: 9.5, textAlign: 'center', background: 'none' }}
                   />
+                </label>
+                <label className="add-site-field">
+                  <span>Address</span>
                   <input
                     value={newUrl}
-                    placeholder="url"
-                    onChange={(event) => setNewUrl(event.target.value)}
-                    onKeyDown={(event) => event.stopPropagation()}
-                    style={{ width: '100%', border: 0, outline: 'none', fontSize: 8.5, textAlign: 'center', background: 'none' }}
+                    placeholder="example.com"
+                    spellCheck={false}
+                    onChange={(event) => {
+                      setNewUrl(event.target.value);
+                      setNewError('');
+                    }}
                   />
+                </label>
+                {newError && <div className="add-site-error">{newError}</div>}
+                {topSites.length > 0 && (
+                  <div className="add-site-quick">
+                    <span>Frequent</span>
+                    <div>
+                      {topSites.slice(0, 4).map((site) => (
+                        <button
+                          key={site.url}
+                          type="button"
+                          className="start-chip"
+                          style={{ height: 24, fontSize: 10.5 }}
+                          onClick={() => {
+                            setNewUrl(site.url);
+                            setNewTitle(site.title || domainLabel(site.url));
+                            setNewError('');
+                          }}
+                        >
+                          {hostOf(site.url).replace(/^www\./, '')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="add-site-actions">
+                  <button type="button" className="pill-btn" onClick={() => setAdding(false)}>
+                    {t('common.cancel')}
+                  </button>
+                  <button type="submit" className="pill-btn primary">
+                    {t('common.add')}
+                  </button>
                 </div>
-                <button
-                  className="start-chip"
-                  style={{ height: 22, fontSize: 10 }}
-                  onClick={async () => {
-                    if (!newUrl.trim()) return;
-                    const url = newUrl.startsWith('http') ? newUrl : `https://${newUrl.trim()}`;
-                    await updateDials([
-                      ...prefs.startPage.dials,
-                      { id: `d_${Date.now().toString(36)}`, title: newTitle.trim() || domainLabel(url), url, icon: null }
-                    ]);
-                    setAdding(false);
-                    setNewTitle('');
-                    setNewUrl('');
-                  }}
-                >
-                  Add
-                </button>
-              </div>
-            ) : (
-              <button className="dial dial-add" onClick={() => setAdding(true)}>
-                <span className="dial-tile">
-                  <Plus size={22} />
-                </span>
-                <span className="dial-label">Add a site</span>
-              </button>
-            )}
-          </div>
+              </form>
+            </div>
+          )}
 
           {prefs.startPage.showSuggestions && topSites.length > 0 && (
             <div className="suggestions-strip">
-              <div className="suggestions-title">Jump back in</div>
+              <div className="suggestions-title">{t('start.jumpBack')}</div>
               <div className="suggestions-row">
                 {topSites.map((site) => (
                   <button key={site.url} className="suggestion-card" onClick={() => void navigate(site.url)} title={site.url}>
@@ -272,7 +364,7 @@ export function StartPage() {
             </button>
             <button className={`start-chip ${layoutEdit ? 'is-on' : ''}`} onClick={() => setLayoutEdit(!layoutEdit)}>
               <LayoutGrid size={13} />
-              {layoutEdit ? 'Done editing' : 'Edit layout'}
+              {layoutEdit ? t('start.doneEditing') : t('start.editLayout')}
             </button>
             <button className="start-chip" onClick={() => useStore.getState().setUI({ paletteOpen: true })}>
               <Sparkles size={13} />
@@ -281,7 +373,7 @@ export function StartPage() {
           </div>
           <button className={`start-chip ${sheetOpen ? 'is-on' : ''}`} onClick={() => setSheetOpen(!sheetOpen)}>
             <Wand2 size={13} />
-            Customise
+            {t('start.customise')}
           </button>
         </div>
       </div>

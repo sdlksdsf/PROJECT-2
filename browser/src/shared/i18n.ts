@@ -1,0 +1,451 @@
+/**
+ * Interface translation.
+ *
+ * English is the source of truth: every other language only carries the keys it
+ * has been translated for, and anything missing falls back to English rather
+ * than showing a raw key. Adding a language is one entry in `LOCALES` plus a
+ * dictionary with whichever keys it covers.
+ */
+
+export const LOCALES = [
+  { code: 'en', name: 'English', dir: 'ltr' },
+  { code: 'es', name: 'Español', dir: 'ltr' },
+  { code: 'fr', name: 'Français', dir: 'ltr' },
+  { code: 'de', name: 'Deutsch', dir: 'ltr' },
+  { code: 'pt-BR', name: 'Português (Brasil)', dir: 'ltr' },
+  { code: 'id', name: 'Bahasa Indonesia', dir: 'ltr' },
+  { code: 'tr', name: 'Türkçe', dir: 'ltr' },
+  { code: 'ru', name: 'Русский', dir: 'ltr' },
+  { code: 'hi', name: 'हिन्दी', dir: 'ltr' },
+  { code: 'ur', name: 'اردو', dir: 'rtl' },
+  { code: 'ar', name: 'العربية', dir: 'rtl' },
+  { code: 'zh-CN', name: '中文 (简体)', dir: 'ltr' },
+  { code: 'ja', name: '日本語', dir: 'ltr' },
+  { code: 'ko', name: '한국어', dir: 'ltr' }
+] as const;
+
+export type Locale = (typeof LOCALES)[number]['code'];
+
+const en = {
+  'nav.home': 'Home',
+  'nav.settings': 'Settings',
+  'nav.history': 'History',
+  'nav.bookmarks': 'Bookmarks',
+  'nav.downloads': 'Downloads',
+  'nav.extensions': 'Extensions',
+  'nav.themes': 'Themes',
+  'nav.games': 'Games',
+  'nav.about': 'About',
+  'nav.profile': 'Profile',
+
+  'toolbar.back': 'Back',
+  'toolbar.forward': 'Forward',
+  'toolbar.reload': 'Reload',
+  'toolbar.stop': 'Stop',
+  'toolbar.shield': 'Privacy shield',
+  'toolbar.newtab': 'New tab',
+  'toolbar.omnibox': 'Search or enter address',
+
+  'start.search': 'Search or enter address',
+  'start.addSite': 'Add a site',
+  'start.jumpBack': 'Jump back in',
+  'start.customise': 'Customise',
+  'start.editLayout': 'Edit layout',
+  'start.doneEditing': 'Done editing',
+
+  'common.add': 'Add',
+  'common.cancel': 'Cancel',
+  'common.save': 'Save',
+  'common.close': 'Close',
+  'common.delete': 'Delete',
+  'common.undo': 'Undo',
+
+  'addSite.title': 'Add a site',
+  'addSite.name': 'Name',
+  'addSite.url': 'Address',
+  'addSite.hint': 'The name is optional. An address like example.com is enough.',
+  'addSite.invalid': 'Enter an address, for example example.com',
+
+  'account.title': 'Account',
+  'account.email': 'Email',
+  'account.password': 'Password',
+  'account.signIn': 'Sign in',
+  'account.signUp': 'Create account',
+  'account.signOut': 'Sign out',
+  'account.syncNow': 'Sync now',
+  'account.hint': 'Bookmarks and settings, on every computer you sign in on.',
+
+  'games.title': 'Games',
+  'games.hint': 'Opens in a side panel. Nothing runs while it is closed.',
+
+  'update.available': 'Version {version} is available',
+  'update.download': 'Download',
+
+  'settings.language': 'Language',
+  'settings.tileSize': 'Tile size',
+  'settings.theme': 'Theme',
+  'settings.search': 'Search settings'
+} as const;
+
+export type MessageKey = keyof typeof en;
+
+type Dictionary = Partial<Record<MessageKey, string>>;
+
+const dictionaries: Record<string, Dictionary> = {
+  es: {
+    'nav.home': 'Inicio',
+    'nav.settings': 'Ajustes',
+    'nav.history': 'Historial',
+    'nav.bookmarks': 'Marcadores',
+    'nav.downloads': 'Descargas',
+    'nav.extensions': 'Extensiones',
+    'nav.themes': 'Temas',
+    'nav.games': 'Juegos',
+    'nav.about': 'Acerca de',
+    'toolbar.back': 'Atrás',
+    'toolbar.forward': 'Adelante',
+    'toolbar.reload': 'Recargar',
+    'toolbar.newtab': 'Nueva pestaña',
+    'start.search': 'Buscar o escribir una dirección',
+    'start.addSite': 'Añadir un sitio',
+    'start.jumpBack': 'Volver a',
+    'common.add': 'Añadir',
+    'common.cancel': 'Cancelar',
+    'common.save': 'Guardar',
+    'common.close': 'Cerrar',
+    'account.email': 'Correo',
+    'account.password': 'Contraseña',
+    'account.signIn': 'Entrar',
+    'account.signUp': 'Crear cuenta',
+    'account.signOut': 'Salir',
+    'addSite.title': 'Añadir un sitio',
+    'addSite.name': 'Nombre',
+    'addSite.url': 'Dirección'
+  },
+  fr: {
+    'nav.home': 'Accueil',
+    'nav.settings': 'Paramètres',
+    'nav.history': 'Historique',
+    'nav.bookmarks': 'Favoris',
+    'nav.downloads': 'Téléchargements',
+    'nav.extensions': 'Extensions',
+    'nav.themes': 'Thèmes',
+    'nav.games': 'Jeux',
+    'nav.about': 'À propos',
+    'toolbar.back': 'Précédent',
+    'toolbar.forward': 'Suivant',
+    'toolbar.reload': 'Actualiser',
+    'toolbar.newtab': 'Nouvel onglet',
+    'start.search': 'Rechercher ou saisir une adresse',
+    'start.addSite': 'Ajouter un site',
+    'start.jumpBack': 'Reprendre',
+    'common.add': 'Ajouter',
+    'common.cancel': 'Annuler',
+    'common.save': 'Enregistrer',
+    'common.close': 'Fermer',
+    'account.email': 'E-mail',
+    'account.password': 'Mot de passe',
+    'account.signIn': 'Se connecter',
+    'account.signUp': 'Créer un compte',
+    'account.signOut': 'Se déconnecter',
+    'addSite.title': 'Ajouter un site',
+    'addSite.name': 'Nom',
+    'addSite.url': 'Adresse'
+  },
+  de: {
+    'nav.home': 'Start',
+    'nav.settings': 'Einstellungen',
+    'nav.history': 'Verlauf',
+    'nav.bookmarks': 'Lesezeichen',
+    'nav.downloads': 'Downloads',
+    'nav.extensions': 'Erweiterungen',
+    'nav.themes': 'Designs',
+    'nav.games': 'Spiele',
+    'nav.about': 'Über',
+    'toolbar.back': 'Zurück',
+    'toolbar.forward': 'Vorwärts',
+    'toolbar.reload': 'Neu laden',
+    'toolbar.newtab': 'Neuer Tab',
+    'start.search': 'Suchen oder Adresse eingeben',
+    'start.addSite': 'Seite hinzufügen',
+    'start.jumpBack': 'Weiter bei',
+    'common.add': 'Hinzufügen',
+    'common.cancel': 'Abbrechen',
+    'common.save': 'Speichern',
+    'common.close': 'Schließen',
+    'account.email': 'E-Mail',
+    'account.password': 'Passwort',
+    'account.signIn': 'Anmelden',
+    'account.signUp': 'Konto erstellen',
+    'account.signOut': 'Abmelden',
+    'addSite.title': 'Seite hinzufügen',
+    'addSite.name': 'Name',
+    'addSite.url': 'Adresse'
+  },
+  'pt-BR': {
+    'nav.home': 'Início',
+    'nav.settings': 'Configurações',
+    'nav.history': 'Histórico',
+    'nav.bookmarks': 'Favoritos',
+    'nav.downloads': 'Downloads',
+    'nav.extensions': 'Extensões',
+    'nav.themes': 'Temas',
+    'nav.games': 'Jogos',
+    'nav.about': 'Sobre',
+    'toolbar.back': 'Voltar',
+    'toolbar.forward': 'Avançar',
+    'toolbar.reload': 'Recarregar',
+    'toolbar.newtab': 'Nova aba',
+    'start.search': 'Pesquisar ou digitar um endereço',
+    'start.addSite': 'Adicionar site',
+    'start.jumpBack': 'Continuar de',
+    'common.add': 'Adicionar',
+    'common.cancel': 'Cancelar',
+    'common.save': 'Salvar',
+    'common.close': 'Fechar',
+    'account.email': 'E-mail',
+    'account.password': 'Senha',
+    'account.signIn': 'Entrar',
+    'account.signUp': 'Criar conta',
+    'account.signOut': 'Sair',
+    'addSite.title': 'Adicionar site',
+    'addSite.name': 'Nome',
+    'addSite.url': 'Endereço'
+  },
+  id: {
+    'nav.home': 'Beranda',
+    'nav.settings': 'Pengaturan',
+    'nav.history': 'Riwayat',
+    'nav.bookmarks': 'Markah',
+    'nav.downloads': 'Unduhan',
+    'nav.extensions': 'Ekstensi',
+    'nav.themes': 'Tema',
+    'nav.games': 'Permainan',
+    'nav.about': 'Tentang',
+    'toolbar.back': 'Kembali',
+    'toolbar.forward': 'Maju',
+    'toolbar.reload': 'Muat ulang',
+    'start.search': 'Cari atau ketik alamat',
+    'start.addSite': 'Tambah situs',
+    'common.add': 'Tambah',
+    'common.cancel': 'Batal',
+    'common.save': 'Simpan',
+    'account.email': 'Email',
+    'account.password': 'Kata sandi',
+    'account.signIn': 'Masuk',
+    'account.signUp': 'Buat akun'
+  },
+  tr: {
+    'nav.home': 'Başlangıç',
+    'nav.settings': 'Ayarlar',
+    'nav.history': 'Geçmiş',
+    'nav.bookmarks': 'Yer imleri',
+    'nav.downloads': 'İndirmeler',
+    'nav.extensions': 'Uzantılar',
+    'nav.themes': 'Temalar',
+    'nav.games': 'Oyunlar',
+    'nav.about': 'Hakkında',
+    'toolbar.back': 'Geri',
+    'toolbar.forward': 'İleri',
+    'toolbar.reload': 'Yenile',
+    'start.search': 'Ara veya adres yaz',
+    'start.addSite': 'Site ekle',
+    'common.add': 'Ekle',
+    'common.cancel': 'Vazgeç',
+    'common.save': 'Kaydet',
+    'account.email': 'E-posta',
+    'account.password': 'Parola',
+    'account.signIn': 'Giriş yap',
+    'account.signUp': 'Hesap oluştur'
+  },
+  ru: {
+    'nav.home': 'Домой',
+    'nav.settings': 'Настройки',
+    'nav.history': 'История',
+    'nav.bookmarks': 'Закладки',
+    'nav.downloads': 'Загрузки',
+    'nav.extensions': 'Расширения',
+    'nav.themes': 'Темы',
+    'nav.games': 'Игры',
+    'nav.about': 'О браузере',
+    'toolbar.back': 'Назад',
+    'toolbar.forward': 'Вперёд',
+    'toolbar.reload': 'Обновить',
+    'start.search': 'Поиск или адрес',
+    'start.addSite': 'Добавить сайт',
+    'common.add': 'Добавить',
+    'common.cancel': 'Отмена',
+    'common.save': 'Сохранить',
+    'account.email': 'Почта',
+    'account.password': 'Пароль',
+    'account.signIn': 'Войти',
+    'account.signUp': 'Создать аккаунт'
+  },
+  hi: {
+    'nav.home': 'होम',
+    'nav.settings': 'सेटिंग्स',
+    'nav.history': 'इतिहास',
+    'nav.bookmarks': 'बुकमार्क',
+    'nav.downloads': 'डाउनलोड',
+    'nav.extensions': 'एक्सटेंशन',
+    'nav.themes': 'थीम',
+    'nav.games': 'गेम',
+    'nav.about': 'परिचय',
+    'toolbar.back': 'पीछे',
+    'toolbar.forward': 'आगे',
+    'toolbar.reload': 'रीलोड',
+    'start.search': 'खोजें या पता लिखें',
+    'start.addSite': 'साइट जोड़ें',
+    'common.add': 'जोड़ें',
+    'common.cancel': 'रद्द करें',
+    'common.save': 'सहेजें',
+    'account.email': 'ईमेल',
+    'account.password': 'पासवर्ड',
+    'account.signIn': 'साइन इन',
+    'account.signUp': 'खाता बनाएँ'
+  },
+  ur: {
+    'nav.home': 'ہوم',
+    'nav.settings': 'ترتیبات',
+    'nav.history': 'تاریخ',
+    'nav.bookmarks': 'بُک مارکس',
+    'nav.downloads': 'ڈاؤن لوڈ',
+    'nav.extensions': 'ایکسٹینشنز',
+    'nav.themes': 'تھیمز',
+    'nav.games': 'گیمز',
+    'nav.about': 'تعارف',
+    'toolbar.back': 'واپس',
+    'toolbar.forward': 'آگے',
+    'toolbar.reload': 'دوبارہ لوڈ',
+    'start.search': 'تلاش کریں یا پتہ لکھیں',
+    'start.addSite': 'سائٹ شامل کریں',
+    'common.add': 'شامل کریں',
+    'common.cancel': 'منسوخ',
+    'common.save': 'محفوظ کریں',
+    'account.email': 'ای میل',
+    'account.password': 'پاس ورڈ',
+    'account.signIn': 'سائن اِن',
+    'account.signUp': 'اکاؤنٹ بنائیں'
+  },
+  ar: {
+    'nav.home': 'الرئيسية',
+    'nav.settings': 'الإعدادات',
+    'nav.history': 'السجل',
+    'nav.bookmarks': 'المفضلة',
+    'nav.downloads': 'التنزيلات',
+    'nav.extensions': 'الإضافات',
+    'nav.themes': 'المظهر',
+    'nav.games': 'الألعاب',
+    'nav.about': 'حول',
+    'toolbar.back': 'رجوع',
+    'toolbar.forward': 'تقدم',
+    'toolbar.reload': 'إعادة تحميل',
+    'start.search': 'ابحث أو اكتب عنوانًا',
+    'start.addSite': 'إضافة موقع',
+    'common.add': 'إضافة',
+    'common.cancel': 'إلغاء',
+    'common.save': 'حفظ',
+    'account.email': 'البريد',
+    'account.password': 'كلمة المرور',
+    'account.signIn': 'تسجيل الدخول',
+    'account.signUp': 'إنشاء حساب'
+  },
+  'zh-CN': {
+    'nav.home': '主页',
+    'nav.settings': '设置',
+    'nav.history': '历史记录',
+    'nav.bookmarks': '书签',
+    'nav.downloads': '下载',
+    'nav.extensions': '扩展',
+    'nav.themes': '主题',
+    'nav.games': '游戏',
+    'nav.about': '关于',
+    'toolbar.back': '后退',
+    'toolbar.forward': '前进',
+    'toolbar.reload': '重新加载',
+    'start.search': '搜索或输入网址',
+    'start.addSite': '添加网站',
+    'common.add': '添加',
+    'common.cancel': '取消',
+    'common.save': '保存',
+    'account.email': '邮箱',
+    'account.password': '密码',
+    'account.signIn': '登录',
+    'account.signUp': '创建账户'
+  },
+  ja: {
+    'nav.home': 'ホーム',
+    'nav.settings': '設定',
+    'nav.history': '履歴',
+    'nav.bookmarks': 'ブックマーク',
+    'nav.downloads': 'ダウンロード',
+    'nav.extensions': '拡張機能',
+    'nav.themes': 'テーマ',
+    'nav.games': 'ゲーム',
+    'nav.about': 'このブラウザについて',
+    'toolbar.back': '戻る',
+    'toolbar.forward': '進む',
+    'toolbar.reload': '再読み込み',
+    'start.search': '検索またはアドレスを入力',
+    'start.addSite': 'サイトを追加',
+    'common.add': '追加',
+    'common.cancel': 'キャンセル',
+    'common.save': '保存',
+    'account.email': 'メール',
+    'account.password': 'パスワード',
+    'account.signIn': 'サインイン',
+    'account.signUp': 'アカウント作成'
+  },
+  ko: {
+    'nav.home': '홈',
+    'nav.settings': '설정',
+    'nav.history': '방문 기록',
+    'nav.bookmarks': '북마크',
+    'nav.downloads': '다운로드',
+    'nav.extensions': '확장 프로그램',
+    'nav.themes': '테마',
+    'nav.games': '게임',
+    'nav.about': '정보',
+    'toolbar.back': '뒤로',
+    'toolbar.forward': '앞으로',
+    'toolbar.reload': '새로고침',
+    'start.search': '검색 또는 주소 입력',
+    'start.addSite': '사이트 추가',
+    'common.add': '추가',
+    'common.cancel': '취소',
+    'common.save': '저장',
+    'account.email': '이메일',
+    'account.password': '비밀번호',
+    'account.signIn': '로그인',
+    'account.signUp': '계정 만들기'
+  }
+};
+
+/** Normalise `en-US`, `en_GB`, `pt-br` and friends onto a supported locale. */
+export function resolveLocale(language: string | undefined): Locale {
+  if (!language) return 'en';
+  const exact = LOCALES.find((locale) => locale.code.toLowerCase() === language.toLowerCase());
+  if (exact) return exact.code;
+  const base = language.split(/[-_]/)[0].toLowerCase();
+  const match = LOCALES.find((locale) => locale.code.toLowerCase() === base);
+  return match?.code ?? 'en';
+}
+
+export function directionOf(language: string | undefined): 'ltr' | 'rtl' {
+  return LOCALES.find((locale) => locale.code === resolveLocale(language))?.dir ?? 'ltr';
+}
+
+export function translate(language: string | undefined, key: MessageKey, vars?: Record<string, string | number>): string {
+  const locale = resolveLocale(language);
+  const template = dictionaries[locale]?.[key] ?? en[key];
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (match, name: string) => (name in vars ? String(vars[name]) : match));
+}
+
+/** Keys a language still needs, used by the settings screen to stay honest. */
+export function coverageOf(language: string): number {
+  const locale = resolveLocale(language);
+  const total = Object.keys(en).length;
+  const translated = Object.keys(dictionaries[locale] ?? {}).length;
+  return locale === 'en' ? 1 : translated / total;
+}

@@ -1,6 +1,13 @@
 # Sync setup
 
-Kimmino has **no sync server of its own**. Sync works against a Supabase project you create, so the data lives in a database you control — and can delete.
+# Sync setup
+
+Sync is optional. Kimmino ships pointing at its own Supabase project
+(`cvprinxmfqguqezaylhk.supabase.co`) with a **publishable** key, so an account
+works out of the box; every request is scoped to the signed-in user by
+row-level security. Point a build at your own project with environment
+variables or `cloud.json` below, and the same code keeps working.
+
 
 ## What syncs
 
@@ -15,39 +22,33 @@ Everything is opt-in per category in **Settings → Sync**.
 
 ## 1. Create the database
 
-Create a free Supabase project, then run this in the SQL editor (also available as [`docs/sync-schema.sql`](sync-schema.sql)):
+Create a Supabase project, then run [`docs/sync-schema.sql`](sync-schema.sql) in
+the SQL editor. It creates three tables and their policies:
 
-```sql
--- file: docs/sync-schema.sql
-create table if not exists public.kimmino_sync (
-  user_id uuid not null references auth.users (id) on delete cascade,
-  kind text not null check (kind in ('bookmarks','preferences','dials','themes')),
-  id text not null,
-  payload jsonb not null,
-  updated_at timestamptz not null default now(),
-  deleted boolean not null default false,
-  primary key (user_id, kind, id)
-);
+| Table | Shape | Purpose |
+| :--- | :--- | :--- |
+| `settings` | one row per user | `data` holds the preference document and the speed dials |
+| `bookmarks` | one row per address | `(user_id, url)` primary key, so a rename updates instead of duplicating |
+| `devices` | one row per sign-in | name, platform, last seen |
 
-alter table public.kimmino_sync enable row level security;
-
-create policy "own rows read"   on public.kimmino_sync for select using (auth.uid() = user_id);
-create policy "own rows write"  on public.kimmino_sync for insert with check (auth.uid() = user_id);
-create policy "own rows update" on public.kimmino_sync for update using (auth.uid() = user_id);
-create policy "own rows delete" on public.kimmino_sync for delete using (auth.uid() = user_id);
-
-create index if not exists kimmino_sync_user_kind on public.kimmino_sync (user_id, kind);
-```
+RLS on all three is `auth.uid() = user_id` — the publishable key cannot read
+another account's rows even if someone extracts it from the installer.
 
 ## 2. Enable email sign-in
 
-Supabase → **Authentication → Providers → Email**: enable "Email OTP" (magic code, no password). The default Supabase email template sends a six-digit code; Kimmino uses `/auth/v1/otp` and `/auth/v1/verify`.
+Supabase → **Authentication → Providers → Email**: enable Email sign-in. Kimmino
+signs in with email + password (`/auth/v1/token?grant_type=password`) and creates
+accounts with `/auth/v1/signup`; passwords are hashed by Supabase and never
+stored by the browser.
 
-For a smoother first run, disable "Confirm email" redirects — Kimmino verifies inline.
+For a first run that does not need an inbox, turn **Confirm email** off
+(`mailer_autoconfirm`), which is what the Kimmino project does. With it on,
+the account is created but the user must confirm before signing in.
 
 ## 3. Point Kimmino at it
 
-Either set environment variables before launching:
+The built-in project is used when nothing else is configured. To override it,
+either set environment variables before launching:
 
 ```bash
 export KIMMINO_SUPABASE_URL="https://YOUR-PROJECT.supabase.co"
@@ -69,16 +70,24 @@ The anon key is designed to be public; row-level security is what protects the r
 
 ## 4. Connect
 
-**Settings → Sync → Sign in**, enter your email, then the six-digit code. Choose what to sync and whether new devices should pull, push, or merge.
+**Settings → Account** (or `kimmino://settings` → Sync & account), enter an email
+and a password, then press **Sign in** or **Create account**. Signed in, the same
+panel shows the last sync time, a **Sync now** button and **Sign out**.
 
 ## How merge works
 
-Each row is `(user_id, kind, id, payload, updated_at, deleted)`. Merge is last-writer-wins **per item**, not per file, so adding a bookmark on your laptop and another on your desktop keeps both. Deletions are tombstones (`deleted = true`), so a device that has been offline does not resurrect what you removed.
+Bookmarks are merged **per address**: signing in pulls the account's rows and
+adds any this device does not have, then pushes the local list. Settings are
+last-writer-wins per document, because preferences change as a set. Nothing is
+ever deleted from the server by a pull, so an offline device cannot erase
+another device's bookmarks.
 
 ## Deleting your data
 
-- **Settings → Sync → Delete cloud data** removes every row for your user and signs you out.
-- In Supabase: `delete from public.kimmino_sync where user_id = auth.uid();`
+- In Supabase: `delete from public.settings where user_id = auth.uid();` and
+  `delete from public.bookmarks where user_id = auth.uid();` (or delete the
+  account in Authentication → Users, which cascades).
+- **Settings → Account → Sign out** removes the session from this device only.
 - Deleting the Supabase project removes everything, including the auth user.
 
 ## Local-only alternative
@@ -86,7 +95,7 @@ Each row is `(user_id, kind, id, payload, updated_at, deleted)`. Merge is last-w
 No account is required for anything else in Kimmino. If you want portable backups without a server, **Settings → Sync → Export backup** writes a single JSON file:
 
 ```json
-{ "format": "kimmino-backup", "version": 1, "profile": "…", "bookmarks": [], "prefs": {}, "themes": [] }
+{ "format": "kimmino-backup", "version": 2, "profile": "…", "preferences": {}, "bookmarks": [], "history": [] }
 ```
 
 Restore it on any machine with **Import backup**.

@@ -11,8 +11,17 @@ import { applyNetworkPrivacy } from './privacy/network';
 import { configurePermissions } from './permissions';
 import { attachDownloads } from './downloads';
 import { profileDir } from './store';
+import { applyLoginItem, scheduleUpdateCheck } from './app-level';
 import type { FilterEngine } from './privacy/engine';
-import type { ProfileSummary } from '../shared/types';
+import type { Preferences, ProfileSummary } from '../shared/types';
+
+/** One update check per launch, no matter how many profiles open windows. */
+let updateCheckScheduled = false;
+function scheduleUpdateCheckOnce(prefs: Preferences): void {
+  if (updateCheckScheduled) return;
+  updateCheckScheduled = true;
+  scheduleUpdateCheck(prefs);
+}
 
 /**
  * Everything that belongs to one identity: its cookie jar, settings, history,
@@ -80,7 +89,12 @@ export class ProfileRuntime {
       (items) => this.notify('downloads', items)
     );
 
-    void this.extensions.syncInto(this.ses);
+    void this.extensions.syncInto(this.ses).then((report) => {
+      if (report.loaded.length || report.failed.length) {
+        console.log(`[kimmino:extensions] ${report.loaded.length} loaded, ${report.failed.length} failed`);
+        for (const failure of report.failed) console.warn(`[kimmino:extensions] ${failure.name}: ${failure.error}`);
+      }
+    });
 
     if (prefs().system.spellcheck) {
       this.ses.setSpellCheckerLanguages(['en-US']);
@@ -88,6 +102,8 @@ export class ProfileRuntime {
     this.ses.setSpellCheckerEnabled(prefs().system.spellcheck);
 
     this.sync.onChange((status) => this.notify('sync', status));
+    applyLoginItem(this.prefs.all().system.launchOnStartup);
+    scheduleUpdateCheckOnce(this.prefs.all());
     this.notify('sync', this.sync.statusOf());
   }
 

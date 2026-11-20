@@ -281,16 +281,28 @@ export function ExtensionsPage() {
           title="Extensions"
           subtitle="Chrome-compatible add-ons running inside Chromium's extension runtime."
           action={
-            <button
-              className="pill-btn primary"
-              onClick={async () => {
-                const info = await api.extensions.installFromFolder();
-                toast(info ? `Installed ${info.name}` : 'Install cancelled', info ? 'success' : 'info');
-                await reload();
-              }}
-            >
-              <Plus size={13} /> Add extension
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="pill-btn"
+                onClick={async () => {
+                  const result = await api.extensions.installFromFile();
+                  if (result.message !== 'Cancelled.') toast(result.message, result.ok ? 'success' : 'warn');
+                  await reload();
+                }}
+              >
+                <Plus size={13} /> From a .zip
+              </button>
+              <button
+                className="pill-btn primary"
+                onClick={async () => {
+                  const result = await api.extensions.installFromFolder();
+                  if (result.message !== 'Cancelled.') toast(result.message, result.ok ? 'success' : 'warn');
+                  await reload();
+                }}
+              >
+                <Blocks size={13} /> Load unpacked
+              </button>
+            </div>
           }
         />
         {extensions.length === 0 ? (
@@ -307,11 +319,16 @@ export function ExtensionsPage() {
                 <div className="tile-body">
                   <div className="tile-title">{extension.name}</div>
                   <div className="tile-desc">{extension.description || `Version ${extension.version}`}</div>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                     <span className="badge">v{extension.version}</span>
                     <span className="badge">MV{extension.manifestVersion}</span>
-                    {extension.manifestVersion === 3 && <span className="badge warn">limited</span>}
+                    <span className={`badge ${extension.status === 'running' ? 'ok' : extension.status === 'error' ? 'warn' : ''}`}>
+                      {extension.enabled ? (extension.status === 'running' ? 'running' : extension.status === 'error' ? 'failed to load' : 'starting') : 'off'}
+                    </span>
                   </div>
+                  {extension.status === 'error' && extension.error && (
+                    <div className="tile-desc" style={{ color: 'var(--warn, #f0b45f)', marginTop: 6 }}>{extension.error}</div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
                   <Toggle
@@ -355,6 +372,24 @@ export function ThemesPage() {
   const reload = useStore((state) => state.reloadData);
   const toast = useStore((state) => state.toast);
   const [editing, setEditing] = useState<ThemeDefinition | null>(null);
+  const [filter, setFilter] = useState<'all' | 'dark' | 'light' | 'cat' | 'anime' | 'custom'>('all');
+
+  const categoryOf = (theme: ThemeDefinition): 'dark' | 'light' | 'cat' | 'anime' | 'custom' => {
+    if (!theme.builtin) return 'custom';
+    if (theme.id.startsWith('cat-')) return 'cat';
+    if (theme.id.startsWith('anime-')) return 'anime';
+    return theme.isDark ? 'dark' : 'light';
+  };
+
+  const visibleThemes = themes.filter((theme) => filter === 'all' || categoryOf(theme) === filter);
+  const counts = {
+    all: themes.length,
+    dark: themes.filter((theme) => categoryOf(theme) === 'dark').length,
+    light: themes.filter((theme) => categoryOf(theme) === 'light').length,
+    cat: themes.filter((theme) => categoryOf(theme) === 'cat').length,
+    anime: themes.filter((theme) => categoryOf(theme) === 'anime').length,
+    custom: themes.filter((theme) => categoryOf(theme) === 'custom').length
+  };
 
   const startNew = () => {
     setEditing({
@@ -373,7 +408,7 @@ export function ThemesPage() {
       <div className="library">
         <LibraryHead
           title="Themes"
-          subtitle="A theme is a small JSON file of colours. Import one, export one, or make your own."
+          subtitle={`${themes.length} themes included — dark, light, cat and anime palettes. A theme is a small JSON file of colours; import one or make your own.`}
           action={
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -404,6 +439,26 @@ export function ThemesPage() {
           }
         />
 
+        <div className="chip-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          {([
+            ['all', 'All'],
+            ['dark', 'Dark'],
+            ['light', 'Light'],
+            ['cat', 'Cat'],
+            ['anime', 'Anime'],
+            ['custom', 'Mine']
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              className={`start-chip ${filter === key ? 'is-on' : ''}`}
+              onClick={() => setFilter(key)}
+              disabled={counts[key] === 0 && key !== 'all'}
+            >
+              {label} <span style={{ opacity: 0.6, marginLeft: 4 }}>{counts[key]}</span>
+            </button>
+          ))}
+        </div>
+
         <div className="card-grid">
           <ThemeCard
             id={null}
@@ -417,7 +472,7 @@ export function ThemesPage() {
               await useStore.getState().setPrefs({ customThemeId: null });
             }}
           />
-          {themes.map((theme) => (
+          {visibleThemes.map((theme) => (
             <ThemeCard
               key={theme.id}
               id={theme.id}

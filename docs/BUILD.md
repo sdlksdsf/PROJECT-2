@@ -115,10 +115,22 @@ CI has no display, and Electron cannot boot headlessly, so this keeps the README
 
 | Variable | Used by | Purpose |
 | :--- | :--- | :--- |
-| `KIMMINO_SUPABASE_URL` | sync | Your Supabase project URL |
-| `KIMMINO_SUPABASE_ANON_KEY` | sync | Anon key, row-level security enforced |
-| `KIMMINO_AI_ENDPOINT` / `KIMMINO_AI_KEY` | AI panel | Bring-your-own model endpoint |
+| `KIMMINO_SUPABASE_URL` | sync | Override the built-in project URL |
+| `KIMMINO_SUPABASE_ANON_KEY` | sync | Override the built-in publishable key |
+| `KIMMINO_AI_URL` | AI panel | Point the assistant at your own proxy |
+| `GEMINI_API_KEY` | `api/ai.ts` | Server-side key for the Gemini models |
+| `GROQ_API_KEY` | `api/ai.ts` | Server-side key for the Llama models |
 | `KIMMINO_DEVTOOLS` | development | Opens devtools for the shell on launch |
+
+The two Supabase values are compiled in on purpose: a publishable key can only
+read and write the rows row-level security allows, so a downloaded build can
+sign a user in but cannot see anyone else's data. Point a build at a different
+project with the environment variables above or a `cloud.json` in the profile
+folder. The same is true of the assistant: the browser only knows the proxy
+address, and the provider keys live on the server that serves `api/ai.ts`.
+
+To run that server locally: `vercel dev` at the repository root, then start the
+browser with `KIMMINO_AI_URL=http://localhost:3000/api/ai`.
 
 ## Troubleshooting the build
 

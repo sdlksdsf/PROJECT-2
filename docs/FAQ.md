@@ -38,7 +38,7 @@ Extensions like Bitwarden, 1Password and KeePassXC load if their MV2 build is av
 
 ### How much RAM does it actually use?
 
-Roughly 610 MB for thirty tabs with twenty-two frozen, versus about 1.5 GB for a typical Chromium profile, and under 90 MB for the interface itself. Numbers depend on page content; Settings → Performance has the knobs.
+Roughly 610 MB for thirty tabs with twenty-two frozen, versus about 1.5 GB for a typical Chromium profile. The interface is one renderer; the whole app measured about 1.45 GB working set with ten tabs open on Windows. Numbers depend on page content; Settings → Performance has the knobs.
 
 ### Is incognito really private?
 

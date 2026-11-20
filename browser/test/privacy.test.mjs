@@ -44,7 +44,9 @@ test('packaging config produces the advertised artifact names', () => {
 
 test('the privacy engine refuses to ship a permissive default', () => {
   const defaults = fs.readFileSync(path.join(root, 'src/shared/defaults.ts'), 'utf8');
-  for (const expected of ['adBlocking: true', 'blockTrackers: true', 'blockThirdPartyCookies: true', 'blockLocation: true', 'fingerprintProtection: true', 'telemetry: false']) {
+  // There is no telemetry preference to disable: the code path simply does not
+  // exist. These are the protections a user can actually feel.
+  for (const expected of ['adBlocking: true', 'blockTrackers: true', 'blockThirdPartyCookies: true', 'blockLocation: true', 'fingerprintProtection: true', 'blockCryptoMiners: true']) {
     assert.match(defaults, new RegExp(expected), `${expected} must exist in DEFAULT_PREFERENCES`);
   }
   const permissive = /adBlocking:\s*false|blockTrackers:\s*false|blockThirdPartyCookies:\s*false|telemetry:\s*true/;

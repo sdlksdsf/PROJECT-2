@@ -11,6 +11,7 @@ import { SettingsPage } from './pages/Settings';
 import { AboutPage, BookmarksPage, DownloadsPage, ExtensionsPage, HistoryPage, PasswordsPage, ThemesPage } from './pages/Library';
 import { resolveTheme, themeVars } from './lib/theme';
 import { TabIcon } from './components/TabIcon';
+import { PerfOverlay } from './components/PerfOverlay';
 import { X } from 'lucide-react';
 import type { InternalPage } from '@shared/types';
 
@@ -205,7 +206,14 @@ export default function App() {
   const Page = page ? INTERNAL_PAGES[page] : null;
 
   return (
-    <div className="app">
+    <div
+      className="app"
+      style={
+        prefs.uiScale !== 1
+          ? { zoom: prefs.uiScale, width: `${100 / prefs.uiScale}%`, height: `${100 / prefs.uiScale}%` }
+          : undefined
+      }
+    >
       <div className="app-body">
         <Sidebar />
         <div className="app-main">
@@ -250,6 +258,8 @@ export default function App() {
           {focusSession && <FocusOverlay />}
         </div>
       </div>
+
+      {prefs.developer.showPerfOverlay && <PerfOverlay />}
 
       <CommandPalette />
       <ScreenshotPreview />
@@ -317,6 +327,10 @@ function handleShortcut(action: string) {
       state.toast('DevTools open on the right', 'info');
       break;
     case 'split': {
+      if (!state.prefs.productivity.splitViewEnabled) {
+        state.toast('Split view is switched off in Settings → Productivity', 'info');
+        break;
+      }
       const other = state.windowState.tabs.find((tab) => tab.id !== active?.id);
       if (active && other) void api.tabs.split(active.id, active.splitWith ? null : other.id);
       break;

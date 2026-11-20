@@ -27,31 +27,82 @@ interface StoredExtension {
  * extensions that depend on a background service worker are flagged as
  * "limited" in the UI instead of silently failing.
  */
+export interface LoadReport {
+  loaded: string[];
+  failed: Array<{ id: string; name: string; error: string }>;
+}
+
+const CHROME_STORE_PATTERN = /^https?:\/\/chromewebstore\.google\.com\/webstore\/detail\//i;
+
 export class ExtensionService {
   private store: JsonStore<StoredExtension[]>;
   private loaded = new Set<string>();
+  private errors = new Map<string, string>();
 
   constructor(private profileId: string, private extensionsDir: string) {
     this.store = new JsonStore<StoredExtension[]>('extensions.json', () => [], extensionsDir);
   }
 
   async list(): Promise<ExtensionInfo[]> {
-    return this.store.get().map((ext) => ({ ...ext }));
+    return this.store.get().map((ext) => ({
+      ...ext,
+      status: this.loaded.has(ext.id) ? 'running' : this.errors.has(ext.id) ? 'error' : 'idle',
+      error: this.errors.get(ext.id) ?? null
+    }));
   }
 
-  async syncInto(ses: Session): Promise<void> {
-    const enabled = this.store.get().filter((ext) => ext.enabled);
-    const loader = (ses as unknown as { extensions?: { loadExtension: (p: string) => Promise<{ id: string }> } }).extensions;
-    for (const ext of enabled) {
-      if (!fs.existsSync(ext.path)) continue;
-      try {
-        if (loader?.loadExtension) await loader.loadExtension(ext.path);
-        else await (ses as unknown as { loadExtension: (p: string) => Promise<unknown> }).loadExtension(ext.path);
-        this.loaded.add(ext.id);
-      } catch (err) {
-        console.warn('[kimmino:extensions] failed to load', ext.name, err);
+  /**
+   * Load every enabled extension into the profile's session and unload anything
+   * that was disabled or removed. Chromium forgets extensions between launches,
+   * so this runs at start-up and again after every change.
+   */
+  async syncInto(ses: Session): Promise<LoadReport> {
+    const report: LoadReport = { loaded: [], failed: [] };
+    const api = (ses as unknown as { extensions?: { loadExtension: (p: string) => Promise<{ id: string; path: string }>; removeExtension: (id: string) => void; getAllExtensions: () => Array<{ id: string; path: string }> } }).extensions;
+    if (!api?.loadExtension) {
+      const error = 'This build was not compiled with extension support.';
+      for (const ext of this.store.get()) this.errors.set(ext.id, error);
+      return report;
+    }
+
+    const installed = this.store.get();
+    const enabled = installed.filter((ext) => ext.enabled && fs.existsSync(ext.path));
+
+    // Unload anything that is running but should not be.
+    const keep = new Set(enabled.map((ext) => path.resolve(ext.path)));
+    for (const running of api.getAllExtensions()) {
+      if (!keep.has(path.resolve(running.path))) {
+        try {
+          api.removeExtension(running.id);
+        } catch {
+          /* already gone */
+        }
       }
     }
+
+    for (const ext of enabled) {
+      if (this.loaded.has(ext.id)) continue;
+      try {
+        await api.loadExtension(ext.path);
+        this.loaded.add(ext.id);
+        this.errors.delete(ext.id);
+        report.loaded.push(ext.id);
+      } catch (err) {
+        const message = explainLoadError(err, ext.path);
+        console.warn('[kimmino:extensions] failed to load', ext.name, message);
+        this.errors.set(ext.id, message);
+        report.failed.push({ id: ext.id, name: ext.name, error: message });
+      }
+    }
+
+    for (const ext of installed) {
+      if (!ext.enabled) this.loaded.delete(ext.id);
+    }
+    return report;
+  }
+
+  errorFor(id: string): string | null {
+    return this.errors.get(id) ?? null;
   }
 
   async installFromFolder(): Promise<ExtensionInfo | null> {
@@ -62,6 +113,18 @@ export class ExtensionService {
     });
     if (result.canceled || !result.filePaths[0]) return null;
     return this.installPath(result.filePaths[0]);
+  }
+
+  /** Pick a .zip or .crx and install it. */
+  async installFromFile(): Promise<ExtensionInfo | null> {
+    const result = await dialog.showOpenDialog({
+      title: 'Select an extension archive',
+      properties: ['openFile'],
+      filters: [{ name: 'Extension', extensions: ['zip', 'crx'] }],
+      buttonLabel: 'Install'
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+    return this.installFromZipFile(result.filePaths[0]);
   }
 
   /** Install from a .zip or unpacked directory that already sits on disk. */
@@ -92,7 +155,8 @@ export class ExtensionService {
     };
     this.store.update((list) => [...list, entry]);
     this.store.flush();
-    return { ...entry };
+    this.errors.delete(id);
+    return { ...entry, status: 'idle', error: null };
   }
 
   /** Install from an extension folder URL (zip) or a local .zip/.crx file. */
@@ -107,6 +171,11 @@ export class ExtensionService {
   }
 
   async installFromUrl(url: string): Promise<ExtensionInfo | null> {
+    if (CHROME_STORE_PATTERN.test(url)) {
+      throw new Error(
+        'Chrome Web Store links cannot be installed directly — Google blocks downloads from other browsers. Use the developer\'s own .crx/.zip, or “Load unpacked”.'
+      );
+    }
     const res = await fetch(url, { headers: { 'user-agent': 'kimmino-extensions/1.0' } });
     if (!res.ok) throw new Error(`Download failed (${res.status})`);
     const buffer = Buffer.from(await res.arrayBuffer());
@@ -127,6 +196,8 @@ export class ExtensionService {
     const ext = this.store.get().find((e) => e.id === id);
     this.store.update((list) => list.filter((e) => e.id !== id));
     this.store.flush();
+    this.loaded.delete(id);
+    this.errors.delete(id);
     if (ext && ext.path.startsWith(this.extensionsDir)) {
       fs.rmSync(ext.path, { recursive: true, force: true });
     }
@@ -167,4 +238,25 @@ function findManifestRoot(dir: string, depth = 0): string | null {
     if (found) return found;
   }
   return null;
+}
+
+/** Chromium's load errors are terse; add the reason and the fix. */
+function explainLoadError(err: unknown, extensionPath: string): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (/Manifest file is missing or unreadable|Could not load manifest/i.test(raw)) {
+    return `No readable manifest.json in ${extensionPath}. Pick the folder that contains manifest.json itself.`;
+  }
+  if (/Manifest version 2 is deprecated|unsupported manifest version/i.test(raw)) {
+    return 'This extension is Manifest V2, which current Chromium no longer runs. Look for an updated release.';
+  }
+  if (/already loaded|Duplicate extension ID/i.test(raw)) {
+    return 'Chromium already has an extension with this ID loaded. Remove the other copy first.';
+  }
+  if (/non-persistent|in-memory/i.test(raw)) {
+    return 'Incognito and temporary sessions cannot host extensions.';
+  }
+  if (/Extension.*not found|ENOENT/i.test(raw)) {
+    return 'The extension folder moved or was deleted. Reinstall it from its new location.';
+  }
+  return raw;
 }

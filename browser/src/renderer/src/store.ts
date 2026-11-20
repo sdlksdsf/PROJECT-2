@@ -209,7 +209,14 @@ export const useStore = create<Store>((set, get) => ({
   navigate: async (input, tabId) => {
     const { prefs } = get();
     const url = toUrl(input, prefs.search.engine, prefs.search.customEngineUrl);
-    await api.tabs.navigate(url, tabId);
+    // "Open search results in a new tab" applies to searches, not to addresses
+    // typed as URLs and not to internal pages — those always reuse the tab.
+    const isSearch = prefs.search.openInNewTab && !tabId && /^https?:\/\//.test(url) && !/^https?:\/\/[^/]+\.[^/]+/.test(input.trim());
+    if (isSearch) {
+      await api.tabs.create(url, { active: true });
+    } else {
+      await api.tabs.navigate(url, tabId);
+    }
     if (prefs.search.autocompleteHistory && !url.startsWith('kimmino://')) {
       void get().reloadData();
     }
