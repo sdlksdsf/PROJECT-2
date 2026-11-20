@@ -73,6 +73,8 @@ export function registerIpc(bridge: AppBridge): void {
   on('window:new', () => bridge.openWindow());
   on('window:new-incognito', () => bridge.openWindow({ incognito: true }));
   on('window:focus', (event) => win(event)?.focus());
+  // "I cannot reach the buttons" — put this window back where it can be seen.
+  on('window:reset-bounds', (event) => win(event)?.resetBounds());
 
   /* ----------------------------- tabs ----------------------------- */
   handle('tabs:create', (event, url?: string, options?: { active?: boolean }) =>

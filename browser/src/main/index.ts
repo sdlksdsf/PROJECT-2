@@ -1,8 +1,9 @@
-import { app, BrowserWindow, dialog, net, protocol, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, net, protocol, screen, session, shell } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { KimminoWindow } from './window';
+import { forgetWindowState, savedWindowState } from './window-state';
 import { ProfileManager } from './profiles';
 import { ProfileRuntime } from './profile-runtime';
 import { FiltersService } from './privacy/filters';
@@ -123,6 +124,12 @@ class KimminoApp {
   }
 
   boot(): void {
+    // `Kimmino --reset-window` is the escape hatch when the saved geometry is
+    // unusable: it forgets it, so the next window comes back centred and fitted.
+    if (process.argv.includes('--reset-window')) {
+      forgetWindowState();
+      logStartup('window geometry forgotten (--reset-window)');
+    }
     this.filters.load();
     void this.filters.refreshIfStale();
     this.registerAssetProtocol();
@@ -242,7 +249,9 @@ class KimminoApp {
       },
       onInternalNavigate: (page: InternalPage) => {
         win.send('internal', page);
-      }
+      },
+      bounds: savedWindowState().bounds,
+      maximized: savedWindowState().maximized
     });
 
     this.windows.set(win.id, win);
@@ -358,7 +367,18 @@ class KimminoApp {
       this.profiles.flush();
     });
     // Open external links in a Kimmino tab instead of handing them to another browser.
+    // Monitors get unplugged, projectors disconnected and resolutions changed.
+    // Every one of those can leave a window larger than — or outside — the screen,
+    // so pull all windows back into view whenever the layout changes.
+    screen.on('display-added', () => this.fitWindows());
+    screen.on('display-removed', () => this.fitWindows());
+    screen.on('display-metrics-changed', () => this.fitWindows());
+
     app.on('second-instance', (_event, argv) => {
+      if (argv.includes('--reset-window')) {
+        this.resetWindows();
+        return;
+      }
       const url = argv.find((arg) => /^https?:\/\//.test(arg));
       let win = this.activeWindow();
       if (!win) {
@@ -373,6 +393,29 @@ class KimminoApp {
       else win?.focus();
     });
     session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+  }
+
+  /** Re-fit every window to the displays that exist right now. */
+  fitWindows(): void {
+    for (const win of this.windows.values()) {
+      try {
+        win.ensureOnScreen();
+      } catch (error) {
+        reportStartupError('fit window', error);
+      }
+    }
+  }
+
+  /** Put every window back in the middle of its screen at a size that fits. */
+  resetWindows(): void {
+    for (const win of this.windows.values()) {
+      try {
+        win.resetBounds();
+        win.focus();
+      } catch (error) {
+        reportStartupError('reset window', error);
+      }
+    }
   }
 
   setPrefsForActiveProfile(patch: DeepPartial<Preferences>): void {

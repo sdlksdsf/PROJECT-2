@@ -126,7 +126,7 @@ export function createMockApi(): KimminoApi {
 
   const api: KimminoApi = {
     platform: 'web',
-    version: '1.1.0',
+    version: '1.1.1',
     isNative: false,
 
     window: {
@@ -136,7 +136,8 @@ export function createMockApi(): KimminoApi {
       setFullScreen: () => undefined,
       newWindow: () => undefined,
       newIncognitoWindow: () => undefined,
-      focus: () => undefined
+      focus: () => undefined,
+      resetBounds: () => undefined
     },
 
     tabs: {
@@ -434,15 +435,15 @@ export function createMockApi(): KimminoApi {
 
     updates: {
       state: async () => ({
-        current: '1.1.0',
-        latest: '1.1.0',
+        current: '1.1.1',
+        latest: '1.1.1',
         notesUrl: null,
         checkedAt: Date.now(),
         status: 'current'
       }),
       check: async () => ({
-        current: '1.1.0',
-        latest: '1.1.0',
+        current: '1.1.1',
+        latest: '1.1.1',
         notesUrl: null,
         checkedAt: Date.now(),
         status: 'current'

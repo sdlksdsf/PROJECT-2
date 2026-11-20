@@ -315,6 +315,8 @@ export interface KimminoApi {
     newWindow(): void;
     newIncognitoWindow(): void;
     focus(): void;
+    /** Centre the window on the current screen and shrink it to fit. */
+    resetBounds(): void;
   };
 
   tabs: {

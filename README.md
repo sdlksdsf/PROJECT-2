@@ -187,7 +187,7 @@ Figures come from our 30-tab fixture profile on a 16 GB machine and will vary wi
 
 ### Windows 10/11
 
-Download `Kimmino-1.1.0-win-x64.exe` from [Releases](https://github.com/sdlksdsf/PROJECT-2/releases/latest) and run it. The NSIS installer is per-user by default (no administrator prompt), lets you choose the installation directory, creates Start-menu and desktop shortcuts, registers the uninstaller, and can set Kimmino as the default browser.
+Download `Kimmino-1.1.1-win-x64.exe` from [Releases](https://github.com/sdlksdsf/PROJECT-2/releases/latest) and run it. The NSIS installer is per-user by default (no administrator prompt), lets you choose the installation directory, creates Start-menu and desktop shortcuts, registers the uninstaller, and can set Kimmino as the default browser.
 
 > If SmartScreen warns about an unknown publisher, choose **More info → Run anyway**, or verify the SHA-256 checksum published with each release. Early builds are unsigned; the code-signing certificate is on the roadmap. Full walkthrough: [docs/INSTALL.md](docs/INSTALL.md).
 
@@ -199,10 +199,10 @@ Download the `.dmg` for your chip (Apple silicon or Intel), open it and drag Kim
 
 ```bash
 # portable
-chmod +x Kimmino-1.1.0-linux-x86_64.AppImage && ./Kimmino-1.1.0-linux-x86_64.AppImage
+chmod +x Kimmino-1.1.1-linux-x86_64.AppImage && ./Kimmino-1.1.1-linux-x86_64.AppImage
 
 # Debian / Ubuntu
-sudo apt install ./kimmino_1.1.0_amd64.deb
+sudo apt install ./kimmino_1.1.1_amd64.deb
 ```
 
 On distributions that restrict unprivileged user namespaces, pass `--no-sandbox` or enable `kernel.unprivileged_userns_clone=1`.

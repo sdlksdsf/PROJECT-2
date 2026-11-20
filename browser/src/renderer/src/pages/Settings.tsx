@@ -309,6 +309,15 @@ export function SettingsPage() {
                   description="Turn off for the absolute lowest CPU usage while idle."
                   control={<Toggle checked={prefs.animations} onChange={(value) => void setPrefs({ animations: value })} />}
                 />
+                <Row
+                  title="Window size & position"
+                  description="Opens larger than it should, or mostly off screen after a monitor change? This centres the window and shrinks it to fit. Shortcut: Ctrl+Shift+Alt+R."
+                  control={
+                    <button className="pill-btn" onClick={() => api.window.resetBounds()}>
+                      Reset window
+                    </button>
+                  }
+                />
               </Section>
 
               <Section title="Layout" id="vertical">

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export const SITE = {
   name: 'Kimmino',
-  version: '1.1.0',
+  version: '1.1.1',
   repo: 'https://github.com/sdlksdsf/PROJECT-2',
   releases: 'https://github.com/sdlksdsf/PROJECT-2/releases/latest',
   discord: 'https://github.com/sdlksdsf/PROJECT-2/discussions',

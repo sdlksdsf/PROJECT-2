@@ -45,8 +45,8 @@ const OS_CARDS: Array<{
     name: 'Windows',
     icon: Monitor,
     requirement: 'Windows 10 1809 or newer · 64-bit · 300 MB free',
-    primary: { suffix: '-win-x64.exe', fallback: 'Kimmino-1.1.0-win-x64.exe', label: 'Windows installer (.exe)' },
-    secondary: { suffix: '-win-arm64.exe', fallback: 'Kimmino-1.1.0-win-arm64.exe', label: 'Windows on ARM' },
+    primary: { suffix: '-win-x64.exe', fallback: 'Kimmino-1.1.1-win-x64.exe', label: 'Windows installer (.exe)' },
+    secondary: { suffix: '-win-arm64.exe', fallback: 'Kimmino-1.1.1-win-arm64.exe', label: 'Windows on ARM' },
     note: 'Unsigned NSIS installer with per-user install, file associations and an uninstaller. No admin rights required — see the SmartScreen note below.'
   },
   {
@@ -54,8 +54,8 @@ const OS_CARDS: Array<{
     name: 'macOS',
     icon: Apple,
     requirement: 'macOS 12 Monterey or newer · Apple silicon or Intel',
-    primary: { suffix: '-mac-arm64.dmg', fallback: 'Kimmino-1.1.0-mac-arm64.dmg', label: 'macOS · Apple silicon (.dmg)' },
-    secondary: { suffix: '-mac-x64.dmg', fallback: 'Kimmino-1.1.0-mac-x64.dmg', label: 'macOS · Intel' },
+    primary: { suffix: '-mac-arm64.dmg', fallback: 'Kimmino-1.1.1-mac-arm64.dmg', label: 'macOS · Apple silicon (.dmg)' },
+    secondary: { suffix: '-mac-x64.dmg', fallback: 'Kimmino-1.1.1-mac-x64.dmg', label: 'macOS · Intel' },
     note: 'Separate Apple silicon and Intel builds, hardened runtime, unsigned. Drag to Applications, then right-click → Open once.'
   },
   {
@@ -63,8 +63,8 @@ const OS_CARDS: Array<{
     name: 'Linux',
     icon: Terminal,
     requirement: 'glibc 2.31+ · x86_64 · AppImage or deb',
-    primary: { suffix: '-linux-x86_64.AppImage', fallback: 'Kimmino-1.1.0-linux-x86_64.AppImage', label: 'AppImage (portable)' },
-    secondary: { suffix: '_amd64.deb', fallback: 'kimmino_1.1.0_amd64.deb', label: 'Debian / Ubuntu (.deb)' },
+    primary: { suffix: '-linux-x86_64.AppImage', fallback: 'Kimmino-1.1.1-linux-x86_64.AppImage', label: 'AppImage (portable)' },
+    secondary: { suffix: '_amd64.deb', fallback: 'kimmino_1.1.1_amd64.deb', label: 'Debian / Ubuntu (.deb)' },
     note: 'No root needed for the AppImage. Sandbox helper ships inside the bundle.'
   }
 ];
@@ -152,6 +152,11 @@ export function DownloadPage() {
                 icon: Sparkles,
                 title: 'Assistant, walls and privacy defaults',
                 body: 'A built-in assistant, 22 wallpapers, tracker blocking on by default, and every setting on this page reachable without an account.'
+              },
+              {
+                icon: Laptop,
+                title: 'A window that fits your screen',
+                body: 'The window now sizes and centres itself for the display it opens on, remembers that geometry, and re-fits when a monitor is added or removed.'
               }
             ].map((item, index) => (
               <Reveal className="feature-card" key={item.title} delay={index * 40} as="article">

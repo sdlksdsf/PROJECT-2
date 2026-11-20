@@ -44,6 +44,10 @@ Roughly 610 MB for thirty tabs with twenty-two frozen, versus about 1.5 GB for a
 
 It creates a profile that writes nothing to disk and uses a separate session partition; closing the window destroys it. It does not hide your traffic from your employer, your ISP or the sites you log into — no browser can. Kimmino's normal mode is already blocking what incognito mode in other browsers only pretends to.
 
+### Why did the window open bigger than my screen?
+
+It always opened at 1320×860, which does not fit a 1024×768 display — the close button and part of the sidebar ended up off screen. 1.1.1 sizes the window for the display, remembers it between launches, and re-fits it whenever the monitor layout changes. If you are on an older build, `Win+←` snaps the window back into view so you can update, and `Ctrl+Shift+Alt+R` recentres it.
+
 ### Why does Windows warn about the installer?
 
 Early builds are not code-signed. SmartScreen warns about every new publisher until reputation accumulates. Verify the SHA-256 checksum published with each release, or build from source. Code signing is on the roadmap.
