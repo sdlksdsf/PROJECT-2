@@ -4,7 +4,7 @@ import { useStore, wallpapers } from '../store';
 import { api, isNative } from '../bridge';
 import { useClock, useKeySound } from '../hooks';
 import { domainLabel, faviconFor, gradientFor, greeting, hostOf, letterOf } from '../lib/url';
-import { SEARCH_ENGINES } from '@shared/defaults';
+import { DEFAULT_SEARCH_ENGINE, SEARCH_ENGINES } from '@shared/defaults';
 
 export function StartPage() {
   const { prefs, history, privacy, profile } = useStore();
@@ -38,7 +38,7 @@ export function StartPage() {
     return [...seen.values()].sort((a, b) => b.visits - a.visits).slice(0, 6);
   }, [history]);
 
-  const engine = SEARCH_ENGINES[prefs.search.engine] ?? SEARCH_ENGINES.duckduckgo;
+  const engine = SEARCH_ENGINES[prefs.search.engine] ?? SEARCH_ENGINES[DEFAULT_SEARCH_ENGINE];
 
   const updateDials = async (dials: typeof prefs.startPage.dials) => {
     await setPrefs({ startPage: { dials } });

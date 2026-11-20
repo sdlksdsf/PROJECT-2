@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Clock, Globe, Lock, Search, ShieldAlert, ShieldCheck, Star, X } from 'lucide-react';
+import { ArrowRight, Clock, Globe, Lock, Search, ShieldAlert, ShieldCheck, Star } from 'lucide-react';
 import { useStore } from '../store';
 import { api } from '../bridge';
 import { useKeySound } from '../hooks';
-import { prettyUrl, searchUrl, toUrl } from '../lib/url';
+import { engineName, prettyUrl, toUrl } from '../lib/url';
 import type { SearchSuggestion } from '@shared/types';
 
 /**
@@ -40,7 +40,7 @@ export function Omnibox() {
     const looksLikeUrl = /^(https?:\/\/|kimmino:\/\/)/.test(query) || /^[\w-]+(\.[\w-]+)+/.test(query);
     out.push({
       type: looksLikeUrl ? 'url' : 'search',
-      title: looksLikeUrl ? query : `${query} — ${prefs.search.engine === 'custom' ? 'Search' : prefs.search.engine}`,
+      title: looksLikeUrl ? query : `Search ${engineName(prefs.search.engine)} for “${query}”`,
       url: toUrl(query, prefs.search.engine, prefs.search.customEngineUrl)
     });
 
@@ -214,8 +214,6 @@ export function Omnibox() {
           </div>
         </div>
       )}
-      <X size={0} />
-      <span style={{ display: 'none' }}>{searchUrl('', prefs.search.engine, prefs.search.customEngineUrl)}</span>
     </div>
   );
 }

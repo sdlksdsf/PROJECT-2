@@ -12,6 +12,7 @@ import { internalUrl, type DeepPartial, type InternalPage, type Preferences } fr
 import { APP_HOMEPAGE } from '../shared/defaults';
 import type { FilterEngine } from './privacy/engine';
 import { logStartup, reportStartupError } from './log';
+import { runSmokeTest, smokeRequested } from './smoke';
 import {
   InstanceHeartbeat,
   acquireInstance,
@@ -49,8 +50,9 @@ app.commandLine.appendSwitch(
     'CalculateNativeWinOcclusion',
     'PrivacySandboxSettings4',
     'InterestCohortAPI',
-    'FedCm',
-    'ThirdPartyStoragePartitioning'
+    /* FedCm and third-party storage partitioning stay ON: Google and Microsoft
+       sign-in depend on them, and disabling them is indistinguishable from a
+       broken browser to the endpoints that check. */
   ].join(',')
 );
 app.commandLine.appendSwitch('enable-features', 'BackForwardCache:TimeToLiveInBackForwardCache/0');
@@ -243,6 +245,10 @@ class KimminoApp {
     this.windows.set(win.id, win);
     this.heartbeat.setWindows(this.windows.size);
     win.boot(!incognito && this.shouldRestoreSession());
+    if (smokeRequested()) {
+      // Give the shell a moment to attach its IPC listeners before driving tabs.
+      setTimeout(() => void runSmokeTest(win), 1200);
+    }
     win.win.on('closed', () => {
       this.windows.delete(win.id);
       this.heartbeat.setWindows(this.windows.size);

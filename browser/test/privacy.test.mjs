@@ -62,6 +62,9 @@ test('no telemetry endpoints are referenced anywhere in the source', () => {
         continue;
       }
       if (!/\.(ts|tsx|mjs|js)$/.test(entry.name)) continue;
+      // The filter engine names these hosts in order to block them; that is the
+      // opposite of reporting to them.
+      if (path.relative(root, full) === path.join('src', 'main', 'privacy', 'engine.ts')) continue;
       const source = fs.readFileSync(full, 'utf8');
       for (const needle of ['google-analytics.com', 'googletagmanager.com', 'sentry.io', 'segment.io', 'mixpanel.com', 'posthog.com', 'amplitude.com']) {
         if (source.includes(needle)) offenders.push(`${path.relative(root, full)} → ${needle}`);

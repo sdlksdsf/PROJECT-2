@@ -53,6 +53,54 @@ export interface MatchResult {
   allowed?: boolean;
 }
 
+/**
+ * Hosts that must never be blocked, whatever a filter list says, plus the
+ * sign-in endpoints whose cookies must survive third-party rules.
+ *
+ * The list lives in `shared/essential-hosts.json` so the app and the filter
+ * compiler (`tools/build-filters.mjs`) cannot disagree about it. Filter lists
+ * describe what to hide on a site, not whether a site may be reached; a single
+ * misparsed rule used to take YouTube, Reddit, Amazon and Spotify off the air.
+ */
+import essentialHosts from '../../shared/essential-hosts.json' with { type: 'json' };
+
+export const ESSENTIAL_DOMAINS: readonly string[] = essentialHosts.neverBlock;
+export const AUTH_DOMAINS: readonly string[] = essentialHosts.auth;
+
+const ESSENTIAL = new Set(ESSENTIAL_DOMAINS);
+const AUTH = new Set(AUTH_DOMAINS);
+
+/**
+ * Measurement and ad delivery hosts that get blocked on sight when they are
+ * third-party. Filter lists drift; these do not stop being trackers.
+ */
+const ALWAYS_BLOCK_TRACKERS = new Set([
+  'google-analytics.com', 'analytics.google.com', 'googletagmanager.com',
+  'doubleclick.net', 'googleadservices.com', 'googlesyndication.com',
+  'adservice.google.com', 'pagead2.googlesyndication.com',
+  'connect.facebook.net', 'analytics.tiktok.com', 'ads.linkedin.com',
+  'static.hotjar.com', 'script.hotjar.com', 'cdn.mxpnl.com', 'api.segment.io',
+  'api.amplitude.com', 'fullstory.com', 'clarity.ms', 'static.criteo.net',
+  'cdn.taboola.com', 'widgets.outbrain.com', 'sb.scorecardresearch.com',
+  'pixel.quantserve.com'
+]);
+
+/** True when `host` is, or is a subdomain of, one of `list`. */
+export function hostInList(host: string, list: Set<string>): boolean {
+  const lower = host.toLowerCase();
+  if (list.has(lower)) return true;
+  for (const suffix of hostSuffixes(lower)) {
+    if (suffix !== lower && list.has(suffix)) return true;
+  }
+  return false;
+}
+
+/** True when a host is a sign-in endpoint whose cookies must survive. */
+export function isAuthHost(host: string): boolean {
+  if (!host) return false;
+  return hostInList(host, AUTH);
+}
+
 const TYPE_KEYWORD: Record<string, string> = {
   script: 'script',
   image: 'image',
@@ -187,6 +235,13 @@ export class FilterEngine {
   /**
    * Decide whether a sub-resource or navigation should be blocked.
    * `firstParty` is the page's registrable host.
+   *
+   * The rules that keep sites working:
+   *  - a top-level navigation is only blocked on an exact malware/phishing host,
+   *    never on a guessed subdomain of one;
+   *  - a site's own resources are never treated as ads or trackers, no matter
+   *    what a list claims about its domain;
+   *  - `ESSENTIAL_DOMAINS` are never blocked at all.
    */
   match(rawUrl: string, options: { firstParty?: string; resourceType?: string } = {}): MatchResult {
     let url: URL;
@@ -200,17 +255,35 @@ export class FilterEngine {
     const host = url.hostname.toLowerCase();
     if (!host) return { block: false, kind: null };
 
-    if (this.isAllowedSite(host)) return { block: false, kind: null, allowed: true };
-    if (options.firstParty && this.isAllowedSite(options.firstParty.toLowerCase())) {
-      return { block: false, kind: null, allowed: true };
-    }
+    if (hostInList(host, ESSENTIAL)) return { block: false, kind: null, allowed: true };
 
     const probe = `${host}${url.pathname}${url.search}`;
+    const navigation = options.resourceType === 'mainFrame' || options.resourceType === 'document';
+    const firstParty = options.firstParty?.toLowerCase();
+    const ownSite = firstParty ? this.sameSite(host, firstParty) : false;
 
-    // Malware / phishing hosts always win.
-    if (this.domainHit(this.malware, host) || this.patternHit(this.malware, probe)) {
-      return { block: true, kind: 'malware' };
+    // An allowlist entry is about the page you are on, not a licence for a
+    // third-party ad server. `@@||ad.doubleclick.net^` used to exempt the ad
+    // network everywhere because of a host-level check here.
+    if (firstParty && this.isAllowedSite(firstParty)) {
+      return { block: false, kind: null, allowed: true };
     }
+    if (ownSite && this.isAllowedSite(host)) return { block: false, kind: null, allowed: true };
+
+    if (!ownSite && !navigation && hostInList(host, ALWAYS_BLOCK_TRACKERS)) {
+      return { block: true, kind: 'trackers' };
+    }
+
+    // Malware / phishing: exact host always, subdomains only for sub-resources.
+    const malwareExact = this.malware.domains.has(host);
+    if (malwareExact) return { block: true, kind: 'malware' };
+    if (!navigation && this.domainHit(this.malware, host)) return { block: true, kind: 'malware' };
+    if (!navigation && this.patternHit(this.malware, probe)) return { block: true, kind: 'malware' };
+
+    // A site is entitled to its own files. Ads and trackers live on other
+    // domains; blocking same-site requests is how a filter list takes a whole
+    // site down.
+    if (ownSite) return { block: false, kind: null };
 
     if (this.domainHit(this.ads, host)) return { block: true, kind: 'ads' };
     if (this.domainHit(this.trackers, host)) return { block: true, kind: 'trackers' };
@@ -249,6 +322,18 @@ export class FilterEngine {
     return css;
   }
 
+  /**
+   * Parameters that carry meaning on ordinary sites. Filter lists contribute
+   * hundreds of `$removeparam` entries, including bare `id`, `ref` and `s`;
+   * stripping those breaks product pages, search pages and media links.
+   */
+  private static readonly KEEP_PARAMS = new Set([
+    'id', 'ref', 'src', 'source', 'page', 'p', 'q', 's', 't', 'v', 'lang', 'hl',
+    'start', 'index', 'cat', 'tag', 'item', 'feed', 'tab', 'type', 'name', 'file',
+    'view', 'mode', 'sort', 'order', 'filter', 'user', 'uid', 'url', 'code', 'state',
+    'query', 'search', 'list', 'channel', 'video', 'playlist', 'page_id', 'post'
+  ]);
+
   /** Remove tracking parameters (utm_*, fbclid, gclid, …) from a URL. */
   stripTrackingParams(rawUrl: string): string {
     let url: URL;
@@ -268,7 +353,9 @@ export class FilterEngine {
     let changed = false;
     for (const key of [...url.searchParams.keys()]) {
       const lower = key.toLowerCase();
-      const shouldStrip = globalParams.has(lower) || domainParams.has(lower) || /^(utm_|ga_|mc_|_hs|vero_|igshid|fbclid|gclid|dclid|msclkid|twclid|ttclid|yclid|oicd|wickedid|oly_enc_id)/.test(lower);
+      const known = /^(utm_|ga_|mc_|_hs|vero_|igshid|fbclid|gclid|dclid|msclkid|twclid|ttclid|yclid|oicd|wickedid|oly_enc_id|hsa_|matomo_|pk_|mtm_)/.test(lower);
+      const listed = (globalParams.has(lower) || domainParams.has(lower)) && lower.length >= 5;
+      const shouldStrip = !FilterEngine.KEEP_PARAMS.has(lower) && (known || listed);
       if (shouldStrip) {
         url.searchParams.delete(key);
         changed = true;
@@ -277,9 +364,15 @@ export class FilterEngine {
     return changed ? url.toString() : rawUrl;
   }
 
-  /** Hosts in the malware list — used by the offline safe-browsing check. */
+  /**
+   * Hosts in the malware list — used by the offline safe-browsing check.
+   * Deliberately exact-match: a list entry for `bad.example` must not take
+   * `example` (or an unrelated `www.example`) down with it.
+   */
   isMalwareHost(host: string): boolean {
-    return this.domainHit(this.malware, host.toLowerCase());
+    const lower = host.toLowerCase();
+    if (hostInList(lower, ESSENTIAL)) return false;
+    return this.malware.domains.has(lower);
   }
 
   get counts() {

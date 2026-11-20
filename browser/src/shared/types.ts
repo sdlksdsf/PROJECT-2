@@ -271,6 +271,8 @@ export interface CaptureResult {
   ok: boolean;
   path?: string;
   dataUrl?: string;
+  /** False when the image was saved but the clipboard was unavailable. */
+  copied?: boolean;
   error?: string;
 }
 

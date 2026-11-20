@@ -41,6 +41,7 @@ export function buildMenu(actions: MenuActions): Menu {
       label: 'File',
       submenu: [
         { label: 'New tab', accelerator: 'CmdOrCtrl+T', click: actions.newTab },
+        { label: 'Close tab', accelerator: 'CmdOrCtrl+W', click: () => actions.shortcut('close-tab') },
         { label: 'New window', accelerator: 'CmdOrCtrl+N', click: actions.newWindow },
         { label: 'New private window', accelerator: 'CmdOrCtrl+Shift+N', click: actions.newIncognito },
         { type: 'separator' },
@@ -108,6 +109,7 @@ export function buildMenu(actions: MenuActions): Menu {
     {
       label: 'Tabs',
       submenu: [
+        { label: 'Focus address bar', accelerator: 'CmdOrCtrl+L', click: () => actions.shortcut('focus-omnibox') },
         { label: 'Next tab', accelerator: 'Ctrl+Tab', click: () => actions.shortcut('next-tab') },
         { label: 'Previous tab', accelerator: 'Ctrl+Shift+Tab', click: () => actions.shortcut('prev-tab') },
         { label: 'Reopen closed tab', accelerator: 'CmdOrCtrl+Shift+T', click: () => actions.shortcut('reopen-tab') },
