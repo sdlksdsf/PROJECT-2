@@ -4,11 +4,11 @@ import { SITE } from './site';
 /**
  * Live release provenance for the download page.
  *
- * The installers keep a stable filename (`Kimmino-1.0.0-win-x64.exe`) across
- * rebuilds, so "which build am I actually getting?" cannot be answered from the
- * page's static copy. Reading `releases/latest` from the GitHub API answers it
- * with the release that is live right now — including the exact publish time of
- * the artifacts behind every download link.
+ * Installer file names embed the version (`Kimmino-1.1.0-win-x64.exe`), so a
+ * hard-coded name silently keeps serving an old build after a new tag is cut.
+ * Reading `releases/latest` from the GitHub API and matching assets by suffix
+ * means every link always resolves to a file that actually exists in the newest
+ * release — plus the exact publish time of the artifacts behind it.
  *
  * Everything degrades: if the API is rate-limited or offline, the page keeps
  * rendering with just the version number and the checksum link.
@@ -18,7 +18,7 @@ const API = 'https://api.github.com/repos/sdlksdsf/PROJECT-2/releases/latest';
 const CHECKSUMS = `${SITE.releases}/download/SHA256SUMS.txt`;
 
 export interface ReleaseInfo {
-  /** Release tag, once known (e.g. "v1.0.0"). */
+  /** Release tag, once known (e.g. "v1.1.0"). */
   tag: string | null;
   /** Asset file name → size in bytes, straight from the release that is live. */
   assets: Record<string, number>;
@@ -80,7 +80,7 @@ export function useLatestRelease(): ReleaseInfo {
   return info;
 }
 
-/** 123 MB, not "123.4 MB" — the precision nobody needs. */
+/** 118 MB, not "118.4 MB" — the precision nobody needs. */
 export function formatBytes(bytes: number | undefined): string | null {
   if (!bytes || bytes <= 0) return null;
   const mb = bytes / (1024 * 1024);
@@ -89,15 +89,39 @@ export function formatBytes(bytes: number | undefined): string | null {
 }
 
 /**
- * Real installer sizes for the current release, keyed by the download URL's
- * file name. Falls back to the measured Windows build so the page never shows a
- * made-up number before the API answers.
+ * The file name inside the release that is live *now*, matched on the stable
+ * part of the name (`-win-x64.exe`) so a version bump needs no code change.
+ * `fallback` is the name this repo publishes today — used only until the API
+ * answers, or when it cannot be reached at all.
  */
-export const MEASURED_SIZES: Record<string, number> = {
-  'Kimmino-1.0.0-win-x64.exe': 123 * 1024 * 1024
+export function assetName(suffix: string, fallback: string, assets: Record<string, number>): string {
+  const match = Object.keys(assets).find((name) => name === suffix || name.endsWith(suffix));
+  return match ?? fallback;
+}
+
+/** Absolute download URL on the newest release. */
+export function assetUrl(suffix: string, fallback: string, assets: Record<string, number>): string {
+  return `${SITE.releases}/download/${assetName(suffix, fallback, assets)}`;
+}
+
+/** Last measured sizes, keyed by the stable suffix, for the pre-API render. */
+const FALLBACK_SIZES: Record<string, number> = {
+  '-win-x64.exe': 118 * 1024 * 1024,
+  '-win-arm64.exe': 112 * 1024 * 1024,
+  '-mac-arm64.dmg': 108 * 1024 * 1024,
+  '-mac-x64.dmg': 111 * 1024 * 1024,
+  '-linux-x86_64.AppImage': 98.2 * 1024 * 1024,
+  '_amd64.deb': 99 * 1024 * 1024
 };
 
+/** `Kimmino-1.1.0-win-x64.exe` → `-win-x64.exe`: the part that survives a version bump. */
+export function nameSuffix(name: string): string {
+  return name.replace(/^Kimmino-\d+\.\d+\.\d+/, '').replace(/^kimmino_\d+\.\d+\.\d+/, '');
+}
+
+/** Real installer size for the current release, matched by file-name suffix. */
 export function sizeFor(url: string, assets: Record<string, number>): string | null {
-  const name = url.split('/').pop() ?? '';
-  return formatBytes(assets[name]) ?? formatBytes(MEASURED_SIZES[name]);
+  const suffix = nameSuffix(url.split('/').pop() ?? '');
+  const live = Object.keys(assets).find((asset) => nameSuffix(asset) === suffix);
+  return formatBytes(live ? assets[live] : undefined) ?? formatBytes(FALLBACK_SIZES[suffix]);
 }

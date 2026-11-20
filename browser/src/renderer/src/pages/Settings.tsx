@@ -1183,7 +1183,7 @@ export function SettingsPage() {
           {section === 'about' && (
             <>
               <h1 className="settings-h1">About Kimmino</h1>
-              <p className="settings-sub">Version 1.0.0 · Mozilla Public License 2.0 · built on Chromium.</p>
+              <p className="settings-sub">Version {api.version} · Mozilla Public License 2.0 · built on Chromium.</p>
               <Section title="The promise">
                 <Row title="No telemetry" description="There is no analytics SDK in this build. Search the source for yourself." control={<span className="badge ok"><Check size={11} /> Verified</span>} />
                 <Row title="No account required" description="Profiles live on your disk. Sync is optional and self-hosted." control={<span className="badge ok"><Check size={11} /> Verified</span>} />
