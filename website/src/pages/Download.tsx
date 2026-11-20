@@ -18,6 +18,7 @@ import {
 import { Link } from 'react-router-dom';
 import { Reveal, SectionHead } from '../components/Chrome';
 import { DOWNLOADS, PLATFORM_LABEL, SITE, usePlatform, type Platform } from '../lib/site';
+import { useLatestRelease } from '../lib/release';
 
 const OS_CARDS: Array<{
   id: Exclude<Platform, 'unknown'>;
@@ -88,13 +89,15 @@ export function DownloadPage() {
   const platform = usePlatform();
   const [selected, setSelected] = useState<Exclude<Platform, 'unknown'>>('windows');
   const active = platform === 'unknown' ? selected : platform;
+  const release = useLatestRelease();
 
   return (
     <>
       <section className="dl-hero">
         <div className="container">
           <span className="eyebrow">
-            <ShieldCheck size={13} /> Version 1.0.0 · Chromium 144 · released 19 November 2026
+            <ShieldCheck size={13} /> Version {SITE.version} · Chromium 144
+            {release.publishedLabel ? ` · installers published ${release.publishedLabel}` : ' · built by public CI'}
           </span>
           <h1>
             Download <span className="gradient-text">Kimmino</span>
@@ -163,7 +166,12 @@ export function DownloadPage() {
               <a href="#build" style={{ color: 'var(--accent)' }}>
                 build from source
               </a>
-              . Checksums are published next to every artifact.
+              .{' '}
+              <a href={release.checksumsUrl} style={{ color: 'var(--accent)' }}>
+                SHA-256 for every artifact
+              </a>{' '}
+              is published next to the download{release.tag ? ` as part of ${release.tag}` : ''} — compare it before you
+              run an unsigned installer.
             </div>
           </Reveal>
         </div>
