@@ -289,11 +289,13 @@ export function registerIpc(bridge: AppBridge): void {
     const runtime = rt(event);
     if (!runtime) return { ok: false, text: 'No profile' };
     const pageText = context ?? (await readActivePageText(win(event)));
+    const window = win(event);
     return runtime.ai.ask({
       prompt,
       pageText,
-      pageUrl: win(event)?.tabs.activeTab()?.url,
-      pageTitle: win(event)?.tabs.activeTab()?.title
+      pageUrl: window?.tabs.activeTab()?.url,
+      pageTitle: window?.tabs.activeTab()?.title,
+      browserContext: describeBrowser(runtime, window, bridge)
     });
   });
   handle('ai:summarize', async (event) => {
@@ -413,6 +415,27 @@ async function readActivePageText(win: KimminoWindow | null): Promise<string> {
   } catch {
     return '';
   }
+}
+
+/**
+ * A short, factual picture of the session for the assistant: which page, what
+ * was blocked, how many tabs, and the protections that are actually on. Without
+ * this the model can only guess when someone asks "why is this page broken?".
+ */
+function describeBrowser(runtime: ProfileRuntime, window: KimminoWindow | null, bridge: AppBridge): string {
+  const prefs = runtime.prefs.all();
+  const stats = bridge.sessionStats();
+  const rules = bridge.filters.stats().counts;
+  const tabs = window?.tabs.snapshot().tabs ?? [];
+  const privacy = prefs.privacy;
+  const on = (value: boolean) => (value ? 'on' : 'off');
+  return [
+    `Browser session: ${tabs.length} tab${tabs.length === 1 ? '' : 's'} open.`,
+    `Blocked this session: ${stats.ads} ads, ${stats.trackers} trackers, ${stats.cookies} third-party cookies.`,
+    `Protections: ad blocking ${on(privacy.adBlocking)}, tracker blocking ${on(privacy.blockTrackers)}, third-party cookies refused ${on(privacy.blockThirdPartyCookies)}, fingerprint randomisation ${on(privacy.fingerprintProtection)}, HTTPS-only ${on(privacy.httpsOnly)}, strict mode ${on(privacy.strictMode)}.`,
+    `Filter bundle: ${rules.ads} ad rules, ${rules.trackers} tracker rules, ${rules.malware} malware rules. Site exceptions: ${runtime.exceptions.all().trustedOrigins.length} trusted origins.`,
+    `Other settings: interface scale ${prefs.uiScale}×, search engine ${prefs.search.engine}, language ${prefs.system.language}, theme ${prefs.customThemeId ?? 'default'}.`
+  ].join('\n');
 }
 
 /**

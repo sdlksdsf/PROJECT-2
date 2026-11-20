@@ -125,11 +125,18 @@ export class AiService {
         messages: [{ role: 'user', content: message }]
       })
     });
-    if (!res.ok) {
-      const detail = (await res.text().catch(() => '')).slice(0, 200);
-      throw new Error(res.status === 429 ? 'too many questions right now' : `HTTP ${res.status} ${detail}`.trim());
+    const body = await res.text().catch(() => '');
+    let data: { text?: string; error?: string };
+    try {
+      data = JSON.parse(body) as { text?: string; error?: string };
+    } catch {
+      // A web page came back instead of JSON: the proxy is not deployed at this
+      // address yet (the marketing site answers unknown paths with its own HTML).
+      throw new Error('the assistant server is not answering at this address yet');
     }
-    const data = (await res.json()) as { text?: string; error?: string };
+    if (!res.ok) {
+      throw new Error(data.error || (res.status === 429 ? 'too many questions right now' : `HTTP ${res.status}`));
+    }
     if (data.error) throw new Error(data.error);
     return data.text?.trim() || '(empty reply)';
   }
