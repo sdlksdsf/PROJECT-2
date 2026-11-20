@@ -17,13 +17,24 @@ export function TitleBar() {
     await api.tabs.close(id);
   };
 
+  // Double-clicking any empty part of the chrome maximises, the way every other
+  // window manager behaves. Buttons and tabs keep their own double-click.
+  const doubleClickChrome = (event: React.MouseEvent) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('.tab, button, input, [role="tab"]')) return;
+    api.window.toggleMaximize();
+  };
+
   return (
-    <div className={`titlebar ${isMac ? 'mac' : ''} ${prefs.compactTabs ? 'compact' : ''}`}>
+    <div
+      className={`titlebar ${isMac ? 'mac' : ''} ${prefs.compactTabs ? 'compact' : ''}`}
+      onDoubleClick={doubleClickChrome}
+    >
       <div className="brand">
         <BrandMark size={20} radius={6} />
       </div>
 
-      <div className="tabstrip" onDoubleClick={() => void api.tabs.create('kimmino://newtab')}>
+      <div className="tabstrip">
         {windowState.tabs.map((tab) => (
           <div
             key={tab.id}

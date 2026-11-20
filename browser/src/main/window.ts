@@ -1,4 +1,5 @@
-import { BaseWindow, WebContentsView, app } from 'electron';
+import { BaseWindow, WebContentsView, app, screen } from 'electron';
+import type { WebContents } from 'electron';
 import path from 'node:path';
 import { TabManager } from './tabs';
 import type { ProfileRuntime } from './profile-runtime';
@@ -6,6 +7,8 @@ import type { ContentRect, InternalPage, WindowState } from '../shared/types';
 import { internalUrl } from '../shared/types';
 import type { FilterEngine } from './privacy/engine';
 import { logStartup } from './log';
+import { centeredBounds, restoreBounds, type Rect } from './window-bounds';
+import { rememberWindowState } from './window-state';
 
 export interface KimminoWindowOptions {
   runtime: ProfileRuntime;
@@ -15,6 +18,9 @@ export interface KimminoWindowOptions {
   rendererFile: string;
   onClose: () => void;
   onInternalNavigate: (page: InternalPage) => void;
+  /** Geometry from the last run; validated against the current displays. */
+  bounds?: Rect | null;
+  maximized?: boolean;
 }
 
 /**
@@ -29,13 +35,22 @@ export class KimminoWindow {
   private splitBounds: ContentRect | null = null;
   private contentVisible = true;
   private destroyed = false;
+  /** Last geometry in the normal (not maximised, not full-screen) state. */
+  private normalBounds: Rect;
+  private saveTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly opts: KimminoWindowOptions) {
+    // A window larger than the screen puts the close button, the sidebar's lower
+    // icons and the right end of the tab strip out of reach — and no drag brings
+    // them back, because there is no position where the window fits. So the size
+    // requested here is always the *fitted* size.
+    const area = screen.getPrimaryDisplay().workArea;
+    const bounds = this.clampToNearestDisplay(opts.bounds ?? centeredBounds(area));
+    this.normalBounds = { ...bounds };
     this.win = new BaseWindow({
-      width: 1320,
-      height: 860,
-      minWidth: 720,
-      minHeight: 480,
+      ...bounds,
+      minWidth: Math.min(720, area.width),
+      minHeight: Math.min(480, area.height),
       show: false,
       frame: false,
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
@@ -71,11 +86,14 @@ export class KimminoWindow {
       onInternalNavigate: opts.onInternalNavigate,
       isTrusted: (origin) => opts.runtime.exceptions.isTrusted(origin),
       preloadPath: opts.preloads.tab,
-      appRoot: path.join(app.getPath('userData'), 'profiles', opts.runtime.profile.id)
+      appRoot: path.join(app.getPath('userData'), 'profiles', opts.runtime.profile.id),
+      onView: (contents) => this.bindWindowShortcuts(contents)
     });
 
+    this.bindWindowShortcuts(this.shell.webContents);
     this.loadShell();
     this.wireWindowEvents();
+    if (opts.maximized) this.win.maximize();
   }
 
   private loadShell(): void {
@@ -98,6 +116,22 @@ export class KimminoWindow {
 
   private wireWindowEvents(): void {
     this.win.on('resize', () => this.applyLayout());
+    this.win.on('resized', () => this.applyLayout());
+    this.win.on('show', () => this.applyLayout());
+    this.win.on('restore', () => {
+      this.applyLayout();
+      this.pushState();
+    });
+    this.win.on('maximize', () => this.applyLayout());
+    this.win.on('unmaximize', () => this.applyLayout());
+    this.win.on('enter-full-screen', () => this.applyLayout());
+    this.win.on('leave-full-screen', () => this.applyLayout());
+    // Remember geometry so the next launch opens where this one was left.
+    const remember = () => this.scheduleRemember();
+    this.win.on('resized', remember);
+    this.win.on('moved', remember);
+    this.win.on('maximize', remember);
+    this.win.on('unmaximize', remember);
     this.win.on('maximize', () => this.pushState());
     this.win.on('unmaximize', () => this.pushState());
     this.win.on('enter-full-screen', () => this.pushState());
@@ -109,6 +143,9 @@ export class KimminoWindow {
       this.shell.webContents.send('k:window-blur', false);
     });
     this.win.on('close', () => {
+      if (this.saveTimer) clearTimeout(this.saveTimer);
+      if (!this.win.isMaximized() && !this.win.isFullScreen()) this.normalBounds = { ...this.win.getBounds() };
+      rememberWindowState(this.normalBounds, this.win.isMaximized());
       this.destroyed = true;
       this.tabs.destroy();
       this.opts.onClose();
@@ -117,6 +154,90 @@ export class KimminoWindow {
       this.pushState();
       this.applyLayout();
     });
+  }
+
+  /**
+   * Escape hatches that do not depend on seeing the interface.
+   *
+   * When a window ends up awkwardly placed (a monitor was unplugged, a projector
+   * was disconnected, the resolution changed) the buttons needed to fix it can be
+   * the ones that are missing. These work from any web contents in the window.
+   */
+  private bindWindowShortcuts(contents: WebContents): void {
+    contents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown') return;
+      const mod = process.platform === 'darwin' ? input.meta : input.control;
+      if (!mod) return;
+      const key = input.key.toLowerCase();
+      if (input.shift && input.alt && (key === 'r' || key === '0')) {
+        // Cmd/Ctrl+Shift+Alt+R — the "I cannot see my window" rescue.
+        this.resetBounds();
+        event.preventDefault();
+        return;
+      }
+      if (input.shift && key === 'm') {
+        this.toggleMaximize();
+        event.preventDefault();
+      }
+    });
+  }
+
+  /** Put the window back in the middle of the current screen at a size that fits. */
+  resetBounds(): void {
+    const area = screen.getDisplayMatching(this.win.getBounds()).workArea;
+    if (this.win.isFullScreen()) this.win.setFullScreen(false);
+    if (this.win.isMaximized()) this.win.unmaximize();
+    const bounds = centeredBounds(area);
+    this.win.setBounds(bounds);
+    this.normalBounds = { ...bounds };
+    this.applyLayout();
+    rememberWindowState(bounds, false);
+    logStartup(`window reset to ${bounds.width}x${bounds.height} at ${bounds.x},${bounds.y}`);
+  }
+
+  /** Pull the window back inside the screens that exist right now. */
+  ensureOnScreen(): void {
+    if (this.destroyed) return;
+    if (this.win.isMaximized() || this.win.isFullScreen()) {
+      // Maximised/full-screen windows follow their display automatically.
+      this.applyLayout();
+      return;
+    }
+    const current = this.win.getBounds();
+    const area = screen.getDisplayMatching(current).workArea;
+    const next = restoreBounds(current, area);
+    if (next.x !== current.x || next.y !== current.y || next.width !== current.width || next.height !== current.height) {
+      this.win.setBounds(next);
+      this.normalBounds = { ...next };
+      this.applyLayout();
+      rememberWindowState(next, false);
+      logStartup(`window pulled back on screen to ${next.width}x${next.height} at ${next.x},${next.y}`);
+    }
+  }
+
+  toggleMaximize(): void {
+    if (this.win.isMaximized()) this.win.unmaximize();
+    else this.win.maximize();
+  }
+
+  private clampToNearestDisplay(rect: Rect | null): Rect {
+    if (!rect) return centeredBounds(screen.getPrimaryDisplay().workArea);
+    const area = screen.getDisplayMatching(rect).workArea;
+    return restoreBounds(rect, area);
+  }
+
+  private scheduleRemember(): void {
+    if (this.destroyed) return;
+    const maximized = this.win.isMaximized();
+    if (!maximized && !this.win.isFullScreen()) this.normalBounds = { ...this.win.getBounds() };
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    // One write per drag, not one per pixel.
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      if (this.destroyed) return;
+      rememberWindowState(this.normalBounds, this.win.isMaximized());
+    }, 400);
+    this.saveTimer.unref?.();
   }
 
   boot(restoreSession: boolean): void {
@@ -140,8 +261,11 @@ export class KimminoWindow {
   }
 
   applyLayout(): void {
+    // The shell must always cover exactly the window: if it keeps a stale size,
+    // the chrome is laid out wider than the visible area and the right/bottom of
+    // the interface is cut off with no way to reach it.
     const [width, height] = this.win.getContentSize();
-    this.shell.setBounds({ x: 0, y: 0, width, height });
+    this.shell.setBounds({ x: 0, y: 0, width: Math.max(1, width), height: Math.max(1, height) });
     // Resize page views only when the window geometry actually changed.
     if (this.contentBounds.width && this.contentBounds.height) {
       this.tabs.setContentBounds(this.contentBounds, this.splitBounds, this.contentVisible);

@@ -48,7 +48,8 @@ const api: KimminoApi = {
     setFullScreen: (on: boolean) => send('window:fullscreen', on),
     newWindow: () => send('window:new'),
     newIncognitoWindow: () => send('window:new-incognito'),
-    focus: () => send('window:focus')
+    focus: () => send('window:focus'),
+    resetBounds: () => send('window:reset-bounds')
   },
 
   tabs: {

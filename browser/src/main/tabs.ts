@@ -22,6 +22,8 @@ export interface TabManagerOptions {
   isTrusted: (origin: string) => boolean;
   preloadPath: string;
   appRoot: string;
+  /** Lets the owner of the window attach window-level shortcuts to page views. */
+  onView?: (contents: WebContents) => void;
 }
 
 interface Tab {
@@ -161,6 +163,7 @@ export class TabManager {
     tab.discarded = false;
     tab.crashed = false;
     this.wireTab(tab, view.webContents);
+    this.opts.onView?.(view.webContents);
     if (url || tab.url) void view.webContents.loadURL(url ?? tab.url).catch(() => {});
     this.layout();
     return view;
