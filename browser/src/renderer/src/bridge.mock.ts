@@ -126,7 +126,7 @@ export function createMockApi(): KimminoApi {
 
   const api: KimminoApi = {
     platform: 'web',
-    version: '1.1.1',
+    version: '1.1.2',
     isNative: false,
 
     window: {
@@ -137,7 +137,8 @@ export function createMockApi(): KimminoApi {
       newWindow: () => undefined,
       newIncognitoWindow: () => undefined,
       focus: () => undefined,
-      resetBounds: () => undefined
+      resetBounds: () => undefined,
+      reportViewport: () => undefined
     },
 
     tabs: {
@@ -435,15 +436,15 @@ export function createMockApi(): KimminoApi {
 
     updates: {
       state: async () => ({
-        current: '1.1.1',
-        latest: '1.1.1',
+        current: '1.1.2',
+        latest: '1.1.2',
         notesUrl: null,
         checkedAt: Date.now(),
         status: 'current'
       }),
       check: async () => ({
-        current: '1.1.1',
-        latest: '1.1.1',
+        current: '1.1.2',
+        latest: '1.1.2',
         notesUrl: null,
         checkedAt: Date.now(),
         status: 'current'
@@ -569,7 +570,17 @@ export function createMockApi(): KimminoApi {
         { code: 'zh-CN', name: '中文 (简体)' },
         { code: 'ja-JP', name: '日本語' }
       ],
-      memory: async () => ({ private: 128, shared: 42, total: 170 })
+      memory: async () => ({ private: 128, shared: 42, total: 170 }),
+      displayInfo: async () => ({
+        windowBounds: { x: 0, y: 0, width: 1280, height: 800 },
+        contentSize: [1280, 800] as [number, number],
+        maximized: false,
+        workArea: { x: 0, y: 0, width: 1280, height: 800 },
+        displaySize: { width: 1280, height: 800 },
+        scaleFactor: 1,
+        viewport: { innerWidth: 1280, innerHeight: 800, availWidth: 1280, availHeight: 800, devicePixelRatio: 1 },
+        platform: 'web'
+      })
     },
 
     app: {

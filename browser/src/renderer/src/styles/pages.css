@@ -505,8 +505,9 @@
 }
 
 .ai-panel {
-  width: 360px;
-  flex: 0 0 360px;
+  width: min(360px, 42vw);
+  flex: 0 0 min(360px, 42vw);
+  min-width: 260px;
   border-left: 1px solid var(--border);
   background: var(--chrome);
   display: flex;

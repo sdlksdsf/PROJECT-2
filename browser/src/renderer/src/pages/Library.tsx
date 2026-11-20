@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Blocks,
   Check,
@@ -25,7 +25,7 @@ import { api, isNative } from '../bridge';
 import { EmptyState, Row, Section, Toggle } from '../components/ui';
 import { TabIcon } from '../components/TabIcon';
 import { formatBytes, domainLabel, relativeTime } from '../lib/url';
-import type { ThemeDefinition } from '@shared/types';
+import type { DisplayInfo, ThemeDefinition } from '@shared/types';
 
 function LibraryHead({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
   return (
@@ -677,6 +677,10 @@ export function AboutPage() {
   const { privacy, bookmarks, history, extensions } = useStore();
   const setPrefs = useStore((state) => state.setPrefs);
   const prefs = useStore((state) => state.prefs);
+  const [display, setDisplay] = useState<DisplayInfo | null>(null);
+  useEffect(() => {
+    void api.system.displayInfo().then(setDisplay).catch(() => setDisplay(null));
+  }, []);
 
   return (
     <div className="page">
@@ -712,6 +716,32 @@ export function AboutPage() {
           <Row title="No telemetry, ever" description="No analytics, no crash reporter, no “anonymous usage statistics”. Verified by reading the source." control={<span className="badge ok">Always</span>} />
           <Row title="No account required" description="Profiles live on your disk. Sync is optional and points at a backend you control." control={<span className="badge ok">Always</span>} />
           <Row title="Open source" description="Mozilla Public License 2.0. Fork it, audit it, ship it." control={<button className="pill-btn" onClick={() => api.system.openExternal('https://github.com/sdlksdsf/PROJECT-2')}>GitHub</button>} />
+        </Section>
+
+        <Section title="Window & display">
+          <Row
+            title="Window size"
+            description={
+              display
+                ? `${display.contentSize ? `${display.contentSize[0]}×${display.contentSize[1]}` : 'unknown'} px` +
+                  ` · ${display.maximized ? 'maximised' : `at ${display.windowBounds?.x ?? 0},${display.windowBounds?.y ?? 0}`}` +
+                  ` · display work area ${display.workArea.width}×${display.workArea.height} at scale ${display.scaleFactor}×` +
+                  (display.viewport
+                    ? ` · interface sees ${Math.round(display.viewport.innerWidth)}×${Math.round(display.viewport.innerHeight)} of ${Math.round(display.viewport.availWidth)}×${Math.round(display.viewport.availHeight)} (dpr ${display.viewport.devicePixelRatio})`
+                    : '')
+                : 'Reading the display…'
+            }
+            control={
+              <button className="pill-btn" onClick={() => api.window.resetBounds()}>
+                Fit to screen
+              </button>
+            }
+          />
+          <Row
+            title="Something cut off?"
+            description="Ctrl+Shift+M maximises, Ctrl+Shift+Alt+R recentres the window, and Settings → Appearance has the same button in words."
+            control={<span className="badge">Shortcuts</span>}
+          />
         </Section>
 
         <Section title="Updates">

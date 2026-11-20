@@ -53,6 +53,30 @@ export default function App() {
 
   /* ------------------------- initialise + events ------------------------ */
   useEffect(() => {
+    // The main process only knows what `screen` tells it, which on scaled or
+    // virtualised displays can be larger than the pixels actually on screen.
+    // The renderer knows better, so it reports its own viewport.
+    if (isNative) {
+      const report = () =>
+        api.window.reportViewport({
+          innerWidth: window.innerWidth,
+          innerHeight: window.innerHeight,
+          availWidth: window.screen.availWidth,
+          availHeight: window.screen.availHeight,
+          devicePixelRatio: window.devicePixelRatio
+        });
+      report();
+      const timer = window.setTimeout(report, 800);
+      window.addEventListener('resize', report);
+      return () => {
+        window.clearTimeout(timer);
+        window.removeEventListener('resize', report);
+      };
+    }
+    return undefined;
+  }, []);
+
+  useEffect(() => {
     void store.init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

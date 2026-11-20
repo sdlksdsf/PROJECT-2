@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { APP_VERSION } from '../shared/defaults';
+import type { DisplayInfo } from '../shared/types';
 import type {
   AiMessage,
   Bookmark,
@@ -49,7 +50,9 @@ const api: KimminoApi = {
     newWindow: () => send('window:new'),
     newIncognitoWindow: () => send('window:new-incognito'),
     focus: () => send('window:focus'),
-    resetBounds: () => send('window:reset-bounds')
+    resetBounds: () => send('window:reset-bounds'),
+    reportViewport: (metrics: { innerWidth: number; innerHeight: number; availWidth: number; availHeight: number; devicePixelRatio: number }) =>
+      send('window:viewport', metrics)
   },
 
   tabs: {
@@ -200,7 +203,8 @@ const api: KimminoApi = {
     setHardwareAcceleration: (on: boolean) => invoke<void>('system:hardware-acceleration', on),
     restart: () => send('system:restart'),
     languages: () => invoke<Array<{ code: string; name: string }>>('system:languages'),
-    memory: () => invoke<{ private: number; shared: number; total: number }>('system:memory')
+    memory: () => invoke<{ private: number; shared: number; total: number }>('system:memory'),
+    displayInfo: () => invoke<DisplayInfo>('system:display-info')
   },
 
   app: {

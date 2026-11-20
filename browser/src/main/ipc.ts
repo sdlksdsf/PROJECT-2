@@ -1,4 +1,4 @@
-import { app, dialog, ipcMain, shell, systemPreferences, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
+import { app, dialog, ipcMain, screen, shell, systemPreferences, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { capture, saveSelection } from './screenshot';
@@ -75,6 +75,10 @@ export function registerIpc(bridge: AppBridge): void {
   on('window:focus', (event) => win(event)?.focus());
   // "I cannot reach the buttons" — put this window back where it can be seen.
   on('window:reset-bounds', (event) => win(event)?.resetBounds());
+  // The renderer's own CSS-pixel view of the window and the display it is on.
+  on('window:viewport', (event, metrics: { innerWidth: number; innerHeight: number; availWidth: number; availHeight: number; devicePixelRatio: number }) =>
+    win(event)?.reportViewport(metrics)
+  );
 
   /* ----------------------------- tabs ----------------------------- */
   handle('tabs:create', (event, url?: string, options?: { active?: boolean }) =>
@@ -339,6 +343,21 @@ export function registerIpc(bridge: AppBridge): void {
 
   /* ---------------------------- system ---------------------------- */
   handle('system:is-default', () => app.isDefaultProtocolClient('http') && app.isDefaultProtocolClient('https'));
+  // Everything needed to explain "the interface does not fit" without guessing.
+  handle('system:display-info', (event) => {
+    const target = win(event);
+    const display = screen.getPrimaryDisplay();
+    return {
+      windowBounds: target ? target.win.getBounds() : null,
+      contentSize: target ? target.win.getContentSize() : null,
+      maximized: target ? target.win.isMaximized() : false,
+      workArea: display.workArea,
+      displaySize: display.size,
+      scaleFactor: display.scaleFactor,
+      viewport: target ? target.viewportMetrics() : null,
+      platform: process.platform
+    };
+  });
   handle('system:set-default', () => {
     if (process.platform === 'win32' || process.platform === 'linux') {
       return app.setAsDefaultProtocolClient('http') && app.setAsDefaultProtocolClient('https');

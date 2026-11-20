@@ -82,3 +82,16 @@ export function fitsIn(rect: Rect, area: Rect): boolean {
   const fixed = restoreBounds(rect, area);
   return fixed.x === rect.x && fixed.y === rect.y && fixed.width === rect.width && fixed.height === rect.height;
 }
+
+/**
+ * Small screens get a maximised window.
+ *
+ * Windows/macOS size a maximised window to the display themselves, which is the
+ * one measurement that stays correct under every DPI-scaling arrangement —
+ * including the ones where the values reported to a frameless Electron window
+ * are larger than the pixels actually on screen. A floating 1320×860 window on a
+ * 1280-wide display would be clipped no matter what; a maximised one cannot be.
+ */
+export function shouldStartMaximized(area: Rect): boolean {
+  return area.width <= 1366 || area.height <= 820;
+}

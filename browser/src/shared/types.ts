@@ -302,6 +302,17 @@ export interface CaptureResult {
 /* IPC surface                                                         */
 /* ------------------------------------------------------------------ */
 
+export interface DisplayInfo {
+  windowBounds: { x: number; y: number; width: number; height: number } | null;
+  contentSize: [number, number] | null;
+  maximized: boolean;
+  workArea: { x: number; y: number; width: number; height: number };
+  displaySize: { width: number; height: number };
+  scaleFactor: number;
+  viewport: { innerWidth: number; innerHeight: number; availWidth: number; availHeight: number; devicePixelRatio: number } | null;
+  platform: string;
+}
+
 export interface KimminoApi {
   platform: NodeJS.Platform | 'web';
   version: string;
@@ -317,6 +328,8 @@ export interface KimminoApi {
     focus(): void;
     /** Centre the window on the current screen and shrink it to fit. */
     resetBounds(): void;
+    /** Report the renderer's CSS-pixel viewport so the main process can spot a window bigger than the display. */
+    reportViewport(metrics: { innerWidth: number; innerHeight: number; availWidth: number; availHeight: number; devicePixelRatio: number }): void;
   };
 
   tabs: {
@@ -475,6 +488,8 @@ export interface KimminoApi {
     restart(): void;
     languages(): Promise<Array<{ code: string; name: string }>>;
     memory(): Promise<{ private: number; shared: number; total: number }>;
+    /** Geometry the app is actually working with — used by Settings → About. */
+    displayInfo(): Promise<DisplayInfo>;
   };
 
   app: {
