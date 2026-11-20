@@ -48,7 +48,9 @@
   gap: 4px;
   flex: 1;
   min-width: 0;
-  -webkit-app-region: no-drag;
+  /* Dragging the window from the empty space next to the tabs, like Chrome.
+     Tabs and buttons opt out below. */
+  -webkit-app-region: drag;
   overflow: hidden;
 }
 
@@ -58,6 +60,7 @@
   gap: 8px;
   height: 30px;
   min-width: 44px;
+  -webkit-app-region: no-drag;
   max-width: 220px;
   flex: 1 1 160px;
   padding: 0 8px 0 10px;
@@ -365,6 +368,19 @@
   padding: 8px 0 10px;
   gap: 3px;
   z-index: 5;
+  /* Short screens (and high interface scale) must still reach every button:
+     the rail scrolls instead of pushing the last icons past the window edge. */
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+.rail::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+.rail-spacer {
+  flex: 1 0 6px;
 }
 .rail-btn {
   width: 38px;
