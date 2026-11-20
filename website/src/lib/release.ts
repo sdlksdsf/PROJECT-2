@@ -4,7 +4,7 @@ import { SITE } from './site';
 /**
  * Live release provenance for the download page.
  *
- * Installer file names embed the version (`Kimmino-1.1.2-win-x64.exe`), so a
+ * Installer file names embed the version (`Kimmino-1.1.3-win-x64.exe`), so a
  * hard-coded name silently keeps serving an old build after a new tag is cut.
  * Reading `releases/latest` from the GitHub API and matching assets by suffix
  * means every link always resolves to a file that actually exists in the newest
@@ -114,7 +114,7 @@ const FALLBACK_SIZES: Record<string, number> = {
   '_amd64.deb': 99 * 1024 * 1024
 };
 
-/** `Kimmino-1.1.2-win-x64.exe` → `-win-x64.exe`: the part that survives a version bump. */
+/** `Kimmino-1.1.3-win-x64.exe` → `-win-x64.exe`: the part that survives a version bump. */
 export function nameSuffix(name: string): string {
   return name.replace(/^Kimmino-\d+\.\d+\.\d+/, '').replace(/^kimmino_\d+\.\d+\.\d+/, '');
 }

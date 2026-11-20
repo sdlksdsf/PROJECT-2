@@ -46,7 +46,7 @@ It creates a profile that writes nothing to disk and uses a separate session par
 
 ### Why did the window open bigger than my screen?
 
-It always opened at 1320×860, which does not fit a 1024×768 display — the close button and part of the sidebar ended up off screen. 1.1.2 opens maximised on displays of 1366×820 or smaller and sizes the window for the display everywhere else, then re-fits whenever the monitor layout or scaling changes. Press `Ctrl+Shift+M` to maximise on any build that is stuck, and `Ctrl+Shift+Alt+R` to recentre.
+It always opened at 1320×860, which does not fit a 1024×768 display — the close button and part of the sidebar ended up off screen. 1.1.3 opens the first window maximised — the window manager fits that to the real screen — and re-fits whenever the monitor layout or scaling changes; small displays keep opening maximised. Press `Ctrl+Shift+M` to maximise on any build that is stuck, and `Ctrl+Shift+Alt+R` to recentre.
 
 ### Why does Windows warn about the installer?
 

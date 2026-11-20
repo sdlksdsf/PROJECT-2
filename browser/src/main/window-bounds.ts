@@ -95,3 +95,15 @@ export function fitsIn(rect: Rect, area: Rect): boolean {
 export function shouldStartMaximized(area: Rect): boolean {
   return area.width <= 1366 || area.height <= 820;
 }
+
+/**
+ * The first window after an install or an update opens maximised.
+ *
+ * Nothing in the app can confirm that the work area it was told matches the
+ * pixels on the monitor, so the safest first move is to let the window manager
+ * place and size it: a maximised window is always exactly the screen. Once the
+ * user resizes it, their geometry is stored (schema 2) and reused from then on.
+ */
+export function shouldOpenMaximized(hasSavedBounds: boolean, area: Rect): boolean {
+  return !hasSavedBounds || shouldStartMaximized(area);
+}
