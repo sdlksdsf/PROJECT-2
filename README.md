@@ -28,7 +28,7 @@ Ads and trackers blocked before they load · fingerprints randomised · third-pa
 
 Because the privacy features you want are always one of three things in other browsers: **an extension you have to install**, **a setting buried four menus deep**, or **a paid tier**. Kimmino inverts that. Every protection is on at install time, and turning one off is the deliberate action.
 
-It is also small. A browser should not be the reason you close a game. Background tabs are frozen, idle renderers are discarded, and the interface itself costs less than 90 MB.
+It is also frugal. A browser should not be the reason you close a game: background tabs are frozen and idle renderers are discarded.
 
 |  | Kimmino | Chrome | Opera | Firefox |
 | :--- | :---: | :---: | :---: | :---: |
@@ -175,7 +175,7 @@ Read the full [privacy policy](docs/PRIVACY.md) — it is short, and every claim
 | :--- | ---: | ---: |
 | 30 tabs open (8 active, 22 frozen) | ~612 MB | ~1,480 MB |
 | Same profile with Game mode | ~384 MB | — |
-| Interface shell (single window) | < 90 MB | 150–250 MB |
+| Interface shell (single window) | 120–180 MB | 150–250 MB |
 | Background CPU with 22 frozen tabs | ~0 % | 1–4 % |
 | Cold start | < 1 s | 2–5 s |
 

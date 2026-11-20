@@ -407,8 +407,21 @@ export function createMockApi(): KimminoApi {
 
     extensions: {
       list: async () => extensions,
-      installFromFolder: async () => null,
-      installFromUrl: async () => null,
+      installFromFolder: async () => ({
+        ok: false,
+        message: 'Preview mode has no extension runtime — install in the desktop app.',
+        extension: null
+      }),
+      installFromUrl: async () => ({
+        ok: false,
+        message: 'Preview mode has no extension runtime — install in the desktop app.',
+        extension: null
+      }),
+      installFromFile: async () => ({
+        ok: false,
+        message: 'Preview mode has no extension runtime — install in the desktop app.',
+        extension: null
+      }),
       setEnabled: async (id, enabled) => {
         extensions = extensions.map((ext) => (ext.id === id ? { ...ext, enabled } : ext));
         save('extensions', extensions);
@@ -417,6 +430,24 @@ export function createMockApi(): KimminoApi {
         extensions = extensions.filter((ext) => ext.id !== id);
         save('extensions', extensions);
       }
+    },
+
+    updates: {
+      state: async () => ({
+        current: '1.0.0',
+        latest: '1.0.0',
+        notesUrl: null,
+        checkedAt: Date.now(),
+        status: 'current'
+      }),
+      check: async () => ({
+        current: '1.0.0',
+        latest: '1.0.0',
+        notesUrl: null,
+        checkedAt: Date.now(),
+        status: 'current'
+      }),
+      dismiss: async () => null
     },
 
     themes: {
@@ -438,16 +469,17 @@ export function createMockApi(): KimminoApi {
 
     sync: {
       status: async () => sync,
-      signIn: async (email) => {
-        sync = { ...sync, state: 'syncing', email, message: 'Demo mode: enter code 000000' };
-        syncListeners.forEach((fn) => fn(sync));
-        return { ok: true, message: 'Preview mode — use the code 000000 to finish signing in.' };
-      },
-      verify: async (email, token) => {
-        if (token !== '000000') return { ok: false, message: 'In preview mode the code is 000000.' };
+      signIn: async (email, password) => {
+        if (password.length < 6) return { ok: false, message: 'Preview mode: use at least 6 characters.' };
         sync = { state: 'synced', email, lastSyncedAt: Date.now(), pendingChanges: 0 };
         syncListeners.forEach((fn) => fn(sync));
         return { ok: true, message: 'Signed in (preview).' };
+      },
+      signUp: async (email, password) => {
+        if (password.length < 6) return { ok: false, message: 'Preview mode: use at least 6 characters.' };
+        sync = { state: 'synced', email, lastSyncedAt: Date.now(), pendingChanges: 0 };
+        syncListeners.forEach((fn) => fn(sync));
+        return { ok: true, message: 'Account created (preview).' };
       },
       signOut: async () => {
         sync = { state: 'signed-out', email: null, lastSyncedAt: null, pendingChanges: 0 };

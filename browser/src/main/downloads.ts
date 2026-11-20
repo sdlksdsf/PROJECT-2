@@ -1,4 +1,4 @@
-import { app, shell, type Session, type WebContents } from 'electron';
+import { app, dialog, shell, type Session, type WebContents } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Library } from './library';
@@ -17,9 +17,25 @@ export function attachDownloads(
   ses.on('will-download', (_event, item, webContents: WebContents | undefined) => {
     const id = `dl_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
     active.set(id, item);
-    const targetDir = prefs().system.downloadDir || downloadsDir();
-    const filename = uniquePath(path.join(targetDir, item.getFilename()));
-    item.setSavePath(filename);
+    const settings = prefs().system;
+    if (settings.askWhereToSave) {
+      const suggestion = path.join(settings.downloadDir || downloadsDir(), item.getFilename());
+      const choice = dialog.showSaveDialogSync({
+        title: 'Save download',
+        defaultPath: suggestion,
+        buttonLabel: 'Save'
+      });
+      if (!choice) {
+        // The user cancelled before anything was written: drop the item rather
+        // than leaving a phantom row in the download list.
+        item.cancel();
+        return;
+      }
+      item.setSavePath(choice);
+    }
+    const targetDir = settings.downloadDir || downloadsDir();
+    const filename = settings.askWhereToSave ? item.getSavePath() : uniquePath(path.join(targetDir, item.getFilename()));
+    if (!settings.askWhereToSave) item.setSavePath(filename);
 
     const record: KimminoDownload = {
       id,

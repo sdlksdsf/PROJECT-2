@@ -38,6 +38,7 @@ export function Omnibox() {
     const out: SearchSuggestion[] = [];
 
     const looksLikeUrl = /^(https?:\/\/|kimmino:\/\/)/.test(query) || /^[\w-]+(\.[\w-]+)+/.test(query);
+    if (!prefs.search.suggestions) return out;
     out.push({
       type: looksLikeUrl ? 'url' : 'search',
       title: looksLikeUrl ? query : `Search ${engineName(prefs.search.engine)} for “${query}”`,

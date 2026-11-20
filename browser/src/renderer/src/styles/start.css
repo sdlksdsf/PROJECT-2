@@ -208,6 +208,48 @@
   }
 }
 
+.dials-sm {
+  max-width: 520px;
+  gap: 2px;
+}
+.dials-sm .dial {
+  padding: 8px 4px 6px;
+}
+.dials-sm .dial-tile {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+}
+.dials-sm .dial-tile img {
+  width: 24px;
+  height: 24px;
+}
+.dials-sm .dial-tile .letter {
+  font-size: 18px;
+}
+.dials-sm .dial-label {
+  font-size: 10.5px;
+}
+.dials-lg {
+  max-width: 700px;
+  gap: 18px;
+}
+.dials-lg .dial-tile {
+  width: 78px;
+  height: 78px;
+  border-radius: 22px;
+}
+.dials-lg .dial-tile img {
+  width: 42px;
+  height: 42px;
+}
+.dials-lg .dial-tile .letter {
+  font-size: 30px;
+}
+.dials-lg .dial-label {
+  font-size: 12.5px;
+}
+
 .dial {
   position: relative;
   display: flex;
@@ -436,4 +478,117 @@
 .sheet-row input[type='range'] {
   width: 130px;
   accent-color: var(--accent);
+}
+
+/* ------------------------- Add a site dialog ------------------------- */
+.add-site-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(4, 7, 12, 0.55);
+  backdrop-filter: blur(10px);
+  animation: fade-in 140ms var(--ease);
+}
+
+.add-site-modal {
+  width: min(420px, calc(100vw - 48px));
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+  background: rgba(16, 20, 28, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  color: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: rise-in 160ms var(--ease);
+}
+
+.add-site-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.add-site-title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.add-site-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  color: rgba(245, 247, 250, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.add-site-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.add-site-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(245, 247, 250, 0.62);
+}
+
+.add-site-field input {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+
+.add-site-field input:focus {
+  border-color: rgba(51, 214, 166, 0.7);
+  box-shadow: 0 0 0 3px rgba(51, 214, 166, 0.16);
+}
+
+.add-site-error {
+  font-size: 11.5px;
+  color: #ffb2a8;
+  background: rgba(255, 107, 92, 0.12);
+  border-radius: 9px;
+  padding: 7px 10px;
+}
+
+.add-site-quick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10.5px;
+  color: rgba(245, 247, 250, 0.5);
+}
+
+.add-site-quick > div {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.add-site-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.add-site-actions .pill-btn {
+  height: 32px;
 }

@@ -18,7 +18,7 @@ import {
 import { Link } from 'react-router-dom';
 import { Reveal, SectionHead } from '../components/Chrome';
 import { DOWNLOADS, PLATFORM_LABEL, SITE, usePlatform, type Platform } from '../lib/site';
-import { useLatestRelease } from '../lib/release';
+import { sizeFor, useLatestRelease } from '../lib/release';
 
 const OS_CARDS: Array<{
   id: Exclude<Platform, 'unknown'>;
@@ -103,8 +103,9 @@ export function DownloadPage() {
             Download <span className="gradient-text">Kimmino</span>
           </h1>
           <p className="hero-sub" style={{ margin: '0 auto' }}>
-            One installer. No bundled extras. Your download is a single 110–140 MB file, checksummed and reproducible
-            from the public source.
+            One installer, no bundled extras. The Windows build is{' '}
+            {sizeFor(DOWNLOADS.windows, release.assets) ?? '123 MB'} — the exact figure, not a rounded-down one —
+            checksummed and reproducible from the public source.
           </p>
           <div className="hero-meta" style={{ marginTop: 20 }}>
             <span><Check size={13} /> Free forever</span>
@@ -143,10 +144,20 @@ export function DownloadPage() {
                     <p className="os-req">{card.requirement}</p>
                     <a className="btn btn-primary btn-sm" href={card.primary} style={{ width: '100%' }}>
                       <Download size={14} /> {card.primaryLabel}
+                      {sizeFor(card.primary, release.assets) && (
+                        <span style={{ marginLeft: 6, opacity: 0.72, fontSize: 12 }}>
+                          · {sizeFor(card.primary, release.assets)}
+                        </span>
+                      )}
                     </a>
                     {card.secondary && (
                       <a className="btn btn-ghost btn-sm" href={card.secondary} style={{ width: '100%', marginTop: 8 }}>
                         {card.secondaryLabel}
+                        {sizeFor(card.secondary, release.assets) && (
+                          <span style={{ marginLeft: 6, opacity: 0.7, fontSize: 12 }}>
+                            · {sizeFor(card.secondary, release.assets)}
+                          </span>
+                        )}
                       </a>
                     )}
                     <p className="small muted" style={{ marginTop: 14, lineHeight: 1.55, fontSize: 12 }}>

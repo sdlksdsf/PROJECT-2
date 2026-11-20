@@ -63,7 +63,7 @@ const FEATURES = [
   {
     icon: Gauge,
     title: 'Light on memory, even in the background',
-    body: 'Background tabs are frozen, renderers are discarded after idling, and the UI shell stays under 90 MB. Your game keeps its frames.',
+    body: 'Background tabs are frozen and idle renderers are discarded, so a game keeps its frames while ten tabs are open.',
     tag: 'Gamer mode'
   },
   {
@@ -167,7 +167,7 @@ export function Home() {
               {[
                 ['47,000+', 'ad & tracker domains blocked'],
                 ['0', 'telemetry requests, ever'],
-                ['Under 90 MB', 'for the whole interface'],
+                ['0 trackers', 'by default'],
                 ['100%', 'open source, MPL-2.0']
               ].map(([value, label]) => (
                 <div className="stat-cell" key={label}>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Accessibility,
   BadgeCheck,
@@ -42,11 +42,14 @@ import {
   Zap
 } from 'lucide-react';
 import { useStore, wallpapers } from '../store';
+import { useT } from '../lib/i18n';
+import { LOCALES, coverageOf, directionOf } from '@shared/i18n';
+import type { MessageKey } from '@shared/i18n';
 import { api, isNative } from '../bridge';
 import { Row, Section, Segmented, Select, Slider, Toggle } from '../components/ui';
 import { ACCENTS } from '../lib/theme';
-import { SEARCH_ENGINES } from '@shared/defaults';
-import type { InternalPage, Preferences } from '@shared/types';
+import { AI_MODELS, SEARCH_ENGINES } from '@shared/defaults';
+import type { InternalPage, Preferences, UpdateState } from '@shared/types';
 
 type SectionId =
   | 'appearance'
@@ -68,10 +71,10 @@ type SectionId =
   | 'developer'
   | 'about';
 
-const NAV: Array<{ id: SectionId; label: string; icon: React.ReactNode; group: string }> = [
+const NAV: Array<{ id: SectionId; label: string; labelKey?: MessageKey; icon: React.ReactNode; group: string }> = [
   { id: 'appearance', label: 'Appearance', icon: <PaletteIcon size={15} />, group: 'Look & feel' },
   { id: 'startpage', label: 'Start page', icon: <ImageIcon size={15} />, group: 'Look & feel' },
-  { id: 'languages', label: 'Languages', icon: <Languages size={15} />, group: 'Look & feel' },
+  { id: 'languages', label: 'Languages', labelKey: 'settings.language', icon: <Languages size={15} />, group: 'Look & feel' },
   { id: 'privacy', label: 'Privacy & security', icon: <Shield size={15} />, group: 'Protection' },
   { id: 'cookies', label: 'Cookies & site data', icon: <Cookie size={15} />, group: 'Protection' },
   { id: 'permissions', label: 'Site permissions', icon: <Lock size={15} />, group: 'Protection' },
@@ -139,9 +142,10 @@ export function SettingsPage() {
   const [highlight, setHighlight] = useState<string | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
   const [clearChoice, setClearChoice] = useState({ cookies: true, cache: true, history: true, downloads: false, siteData: true });
-  const [syncEmail, setSyncEmail] = useState('');
-  const [syncCode, setSyncCode] = useState('');
-  const [syncStage, setSyncStage] = useState<'email' | 'code'>('email');
+  const [updateState, setUpdateState] = useState<UpdateState | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [accountEmail, setAccountEmail] = useState('');
+  const [accountPassword, setAccountPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [newProfile, setNewProfile] = useState('');
 
@@ -181,12 +185,25 @@ export function SettingsPage() {
   const setProductivity = (patch: Partial<Preferences['productivity']>) => void setPrefs({ productivity: patch });
 
   const hl = (anchor: string) => (highlight === anchor ? 'setting-search-hit' : '');
+  const t = useT();
+  const languageCoverage = coverageOf(prefs.system.language);
+
+  useEffect(() => {
+    if (section !== 'about') return;
+    let alive = true;
+    void api.updates.state().then((state) => {
+      if (alive) setUpdateState(state);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [section]);
 
   return (
     <div className="page">
       <div className="settings">
         <nav className="settings-nav">
-          <div className="settings-title">Settings</div>
+          <div className="settings-title">{t('nav.settings')}</div>
           <div className="settings-search">
             <Search size={14} style={{ color: 'var(--text-faint)' }} />
             <input value={query} placeholder="Search all settings" onChange={(event) => setQuery(event.target.value)} />
@@ -215,7 +232,7 @@ export function SettingsPage() {
                 {items.map((item) => (
                   <button key={item.id} className={`nav-item ${section === item.id ? 'is-active' : ''}`} onClick={() => go(item.id)}>
                     {item.icon}
-                    {item.label}
+                    {item.labelKey ? t(item.labelKey) : item.label}
                   </button>
                 ))}
               </div>
@@ -357,6 +374,21 @@ export function SettingsPage() {
               <Section title="Widgets">
                 <Row title="Clock and greeting" control={<Toggle checked={prefs.startPage.showClock} onChange={(value) => void setPrefs({ startPage: { showClock: value } })} />} />
                 <Row title="Recently visited strip" control={<Toggle checked={prefs.startPage.showSuggestions} onChange={(value) => void setPrefs({ startPage: { showSuggestions: value } })} />} />
+                <Row
+                  title="Shortcut size"
+                  description="How large the speed-dial tiles are. Applies immediately on the start page."
+                  control={
+                    <Segmented
+                      value={prefs.startPage.tileSize}
+                      onChange={(value) => void setPrefs({ startPage: { tileSize: value } })}
+                      options={[
+                        { value: 'small', label: 'Small' },
+                        { value: 'medium', label: 'Medium' },
+                        { value: 'large', label: 'Large' }
+                      ]}
+                    />
+                  }
+                />
                 <Row
                   title="Search position"
                   description="Reset to centre the search bar, or drag it on the start page in Edit layout mode."
@@ -539,7 +571,11 @@ export function SettingsPage() {
               </Section>
               <Section title="Power">
                 <div id="gaming" className={hl('gaming')}>
-                  <Row title="Gaming mode" description="When Kimmino loses focus it throttles background timers and pauses animations, freeing GPU and CPU for your game." control={<Toggle checked={prefs.performance.gamingMode} onChange={(value) => setPerformance({ gamingMode: value })} />} />
+                  <Row
+                    title="Gaming mode"
+                    description="Keeps every tab live and stops background throttling, so alt-tabbing back into a game or a video never shows a stalled page. Turns memory saver off while it is on."
+                    control={<Toggle checked={prefs.performance.gamingMode} onChange={(value) => setPerformance({ gamingMode: value })} />}
+                  />
                 </div>
                 <Row title="Throttle background tabs" control={<Toggle checked={prefs.performance.backgroundThrottle} onChange={(value) => setPerformance({ backgroundThrottle: value })} />} />
                 <div id="gpu" className={hl('gpu')}>
@@ -558,7 +594,6 @@ export function SettingsPage() {
                     }
                   />
                 </div>
-                <Row title="Preload pages you are likely to open" description="Off by default: it costs memory and leaks intent before you click." control={<Toggle checked={prefs.performance.preloadPages} onChange={(value) => setPerformance({ preloadPages: value })} />} />
               </Section>
             </>
           )}
@@ -706,111 +741,139 @@ export function SettingsPage() {
           {section === 'ai' && (
             <>
               <h1 className="settings-h1">Kimmino AI</h1>
-              <p className="settings-sub">Summaries work offline. Chat needs a model — yours, on your key, never proxied through us.</p>
-              <Section title="Model">
+              <p className="settings-sub">The assistant explains pages and the browser itself. Provider keys stay on Kimmino's server, never in the installer.</p>
+              <Section title="Assistant">
                 <Row
-                  title="Enable AI assistant"
-                  control={<Toggle checked={prefs.productivity.aiEnabled} onChange={(value) => setProductivity({ aiEnabled: value })} />}
+                  title="Enable the assistant"
+                  description="Off, everything below is hidden and no request is ever made."
+                  control={<Toggle checked={prefs.productivity.aiEnabled} onChange={(value) => setProductivity({ aiEnabled: value, aiProvider: value ? 'kimmino' : 'off' })} />}
                 />
                 <Row
-                  title="Provider"
-                  description="Ollama runs locally and keeps everything on your machine."
+                  title="Model"
+                  description="Gemini models handle longer pages; Llama answers faster."
                   control={
                     <Select
-                      value={prefs.productivity.aiProvider}
-                      onChange={(value) => void setProductivity({ aiProvider: value })}
-                      options={[
-                        { value: 'off', label: 'On-device only' },
-                        { value: 'openai', label: 'OpenAI-compatible' },
-                        { value: 'ollama', label: 'Ollama (local)' },
-                        { value: 'custom', label: 'Custom endpoint' }
-                      ]}
+                      value={prefs.productivity.aiModel || AI_MODELS[0].id}
+                      onChange={(value) => void setProductivity({ aiModel: value })}
+                      options={AI_MODELS.map((model) => ({ value: model.id, label: `${model.label} — ${model.provider}` }))}
                     />
                   }
                 />
                 <Row
-                  title="Endpoint"
-                  description={prefs.productivity.aiProvider === 'ollama' ? 'e.g. http://localhost:11434' : 'e.g. https://api.openai.com/v1'}
-                  control={<input className="text-input" value={prefs.productivity.aiEndpoint} placeholder="https://…" onChange={(event) => void setProductivity({ aiEndpoint: event.target.value })} />}
+                  title="Send the page with my question"
+                  description="Off by default. On, the assistant can see the page address, title and the text you are reading. Nothing else in the browser is shared."
+                  control={<Toggle checked={prefs.productivity.aiPageContext} onChange={(value) => void setProductivity({ aiPageContext: value })} />}
                 />
                 <Row
-                  title="Model"
-                  control={<input className="text-input" value={prefs.productivity.aiModel} placeholder="gpt-4o-mini / llama3.1" onChange={(event) => void setProductivity({ aiModel: event.target.value })} />}
-                />
-                <Row
-                  title="Privacy"
-                  description="Page text is only sent when you press send. Nothing is stored on our side — there is no server of ours."
-                  control={<span className="badge ok"><ShieldCheck size={11} /> On-device by default</span>}
+                  title="What the assistant knows"
+                  description="It is told what Kimmino is — its settings, shortcuts and how blocking works — so it can answer questions about the browser without guessing."
+                  control={<span className="badge ok"><ShieldCheck size={11} /> Built in</span>}
                 />
               </Section>
+              <Section title="Without a connection">
+                <Row
+                  title="On-device answers"
+                  description="Summaries, keyword extraction and “what did it block” keep working offline. They never leave the machine."
+                  control={<span className="badge">Always on</span>}
+                />
+              </Section>
+              <p className="settings-sub" style={{ marginTop: 16 }}>
+                The assistant is a server-side proxy. Your question goes to Kimmino's endpoint, which calls the model with the keys it holds.
+                No key is stored in the app, and no account is required.
+              </p>
             </>
           )}
 
           {section === 'sync' && (
             <>
-              <h1 className="settings-h1">Sync & account</h1>
-              <p className="settings-sub">
-                Optional. Kimmino works fully without an account — signing in only mirrors bookmarks, settings and start-page dials
-                between your devices.
-              </p>
+              <h1 className="settings-h1">{t('account.title')}</h1>
+              <p className="settings-sub">{t('account.hint')}</p>
               <Section title="Account">
-                {sync.state === 'signed-out' && syncStage === 'email' && (
+                {sync.state !== 'synced' && sync.state !== 'syncing' && (
                   <>
                     <Row
-                      title="Email address"
-                      description="We send a 6-digit code. No password to leak."
+                      title={t('account.email')}
                       control={
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <input className="text-input" value={syncEmail} placeholder="you@example.com" onChange={(event) => setSyncEmail(event.target.value)} />
-                          <button
-                            className="pill-btn primary"
-                            disabled={!syncEmail.includes('@') || busy}
-                            onClick={async () => {
-                              setBusy(true);
-                              const result = await api.sync.signIn(syncEmail);
-                              setBusy(false);
-                              toast(result.message, result.ok ? 'success' : 'warn');
-                              if (result.ok) setSyncStage('code');
-                            }}
-                          >
-                            Send code
-                          </button>
-                        </div>
+                        <input
+                          className="text-input"
+                          type="email"
+                          autoComplete="email"
+                          value={accountEmail}
+                          placeholder="you@example.com"
+                          onChange={(event) => setAccountEmail(event.target.value)}
+                        />
                       }
                     />
-                    <Row title="Backend" description="This build points at the operator's own Supabase project, configured with KIMMINO_SUPABASE_URL." control={<span className="badge">{sync.message ?? 'Self-hosted'}</span>} />
+                    <Row
+                      title={t('account.password')}
+                      description="At least 6 characters."
+                      control={
+                        <input
+                          className="text-input"
+                          type="password"
+                          autoComplete="current-password"
+                          value={accountPassword}
+                          placeholder="••••••••"
+                          onChange={(event) => setAccountPassword(event.target.value)}
+                        />
+                      }
+                    />
+                    <div style={{ display: 'flex', gap: 8, padding: '4px 12px 12px' }}>
+                      <button
+                        className="pill-btn primary"
+                        disabled={!accountEmail.includes('@') || accountPassword.length < 6 || busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          const result = await api.sync.signIn(accountEmail.trim(), accountPassword);
+                          setBusy(false);
+                          setAccountPassword('');
+                          toast(result.message, result.ok ? 'success' : 'warn');
+                          if (result.ok) await useStore.getState().reloadData();
+                        }}
+                      >
+                        {t('account.signIn')}
+                      </button>
+                      <button
+                        className="pill-btn"
+                        disabled={!accountEmail.includes('@') || accountPassword.length < 6 || busy}
+                        onClick={async () => {
+                          setBusy(true);
+                          const result = await api.sync.signUp(accountEmail.trim(), accountPassword);
+                          setBusy(false);
+                          setAccountPassword('');
+                          toast(result.message, result.ok ? 'success' : 'warn');
+                        }}
+                      >
+                        {t('account.signUp')}
+                      </button>
+                    </div>
+                    {sync.message && <Row title="Last attempt" description={sync.message} control={<span className="badge">{sync.state}</span>} />}
                   </>
                 )}
-                {sync.state === 'signed-out' && syncStage === 'code' && (
-                  <Row
-                    title="Verification code"
-                    description={`Sent to ${syncEmail}. Codes expire after 10 minutes.`}
-                    control={
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <input className="text-input" value={syncCode} placeholder="000000" onChange={(event) => setSyncCode(event.target.value)} />
-                        <button
-                          className="pill-btn primary"
-                          onClick={async () => {
-                            const result = await api.sync.verify(syncEmail, syncCode);
-                            toast(result.message, result.ok ? 'success' : 'warn');
-                            if (result.ok) setSyncStage('email');
-                          }}
-                        >
-                          Verify
-                        </button>
-                      </div>
-                    }
-                  />
-                )}
-                {sync.state !== 'signed-out' && (
+                {(sync.state === 'synced' || sync.state === 'syncing') && (
                   <>
-                    <Row title="Signed in" description={sync.email ?? ''} control={<span className="badge ok"><Check size={11} /> {sync.state}</span>} />
                     <Row
-                      title="Sync now"
-                      description={sync.lastSyncedAt ? `Last synced ${new Date(sync.lastSyncedAt).toLocaleString()}` : 'Not synced yet'}
-                      control={<button className="pill-btn" onClick={async () => { await api.sync.syncNow(); toast('Synced', 'success'); }}>Sync</button>}
+                      title="Signed in"
+                      description={sync.email ?? ''}
+                      control={<span className="badge ok"><Check size={11} /> {sync.state === 'syncing' ? 'Syncing' : 'Synced'}</span>}
                     />
-                    <Row title="Sign out" control={<button className="pill-btn" onClick={async () => { await api.sync.signOut(); toast('Signed out', 'info'); }}>Sign out</button>} />
+                    <Row
+                      title={t('account.syncNow')}
+                      description={sync.lastSyncedAt ? `Last synced ${new Date(sync.lastSyncedAt).toLocaleString()}` : 'Not synced yet'}
+                      control={
+                        <button className="pill-btn" onClick={async () => {
+                          const result = await api.sync.syncNow();
+                          toast(result.state === 'offline' ? 'Could not reach the server' : 'Synced', result.state === 'offline' ? 'warn' : 'success');
+                        }}>
+                          {t('account.syncNow')}
+                        </button>
+                      }
+                    />
+                    <Row
+                      title={t('account.signOut')}
+                      description="Local data stays; only the connection is removed."
+                      control={<button className="pill-btn" onClick={async () => { await api.sync.signOut(); toast('Signed out', 'info'); }}>{t('account.signOut')}</button>}
+                    />
                   </>
                 )}
               </Section>
@@ -899,8 +962,8 @@ export function SettingsPage() {
                   title="Add from a folder"
                   description="Unpacked extension (the folder containing manifest.json)."
                   control={<button className="pill-btn" onClick={async () => {
-                    const info = await api.extensions.installFromFolder();
-                    toast(info ? `Installed ${info.name}` : 'Install cancelled', info ? 'success' : 'info');
+                    const result = await api.extensions.installFromFolder();
+                    if (result.message !== 'Cancelled.') toast(result.message, result.ok ? 'success' : 'warn');
                     await reloadData();
                   }}>Choose folder</button>}
                 />
@@ -968,16 +1031,29 @@ export function SettingsPage() {
               <p className="settings-sub">The language Kimmino speaks, and the languages it tells websites you understand.</p>
               <Section title="Interface">
                 <Row
-                  title="Browser language"
-                  description="Applies to menus, settings and the Accept-Language header."
+                  title={t('settings.language')}
+                  description="Applies instantly to the rail, toolbar, start page and settings — and sets the Accept-Language header sites see."
                   control={
                     <Select
                       value={prefs.system.language}
                       onChange={(value) => void setPrefs({ system: { language: value } })}
-                      options={useStore.getState().languages.map((language) => ({ value: language.code, label: language.name }))}
+                      options={LOCALES.map((locale) => ({
+                        value: locale.code,
+                        label: `${locale.name}${locale.dir === 'rtl' ? ' — right to left' : ''}`
+                      }))}
                     />
                   }
                 />
+                <Row
+                  title="Translation coverage"
+                  description={
+                    languageCoverage === 1
+                      ? 'Fully translated.'
+                      : `${Math.round(languageCoverage * 100)}% of the interface is translated; anything missing stays in English rather than showing a blank.`
+                  }
+                  control={<span className="badge ok"><Languages size={11} /> {LOCALES.find((locale) => locale.code === prefs.system.language)?.name ?? 'English'}</span>}
+                />
+                <Row title="Right-to-left layout" description="Mirrors the whole interface for Arabic and Urdu. Automatic from the language above." control={<span className="badge">{directionOf(prefs.system.language) === 'rtl' ? 'On' : 'Off'}</span>} />
                 <Row title="Check spelling as I type" control={<Toggle checked={prefs.system.spellcheck} onChange={(value) => void setPrefs({ system: { spellcheck: value } })} />} />
               </Section>
             </>
@@ -1115,9 +1191,74 @@ export function SettingsPage() {
               </Section>
               <Section title="Updates" id="early-bird">
                 <Row
-                  title="Early bird updates"
-                  description="Get release candidates a few days before everyone else. Slightly higher chance of rough edges."
+                  title="Check automatically"
+                  description="Once per launch Kimmino asks GitHub for the newest release tag. No identifier is sent, and nothing downloads on its own."
+                  control={<Toggle checked={prefs.updates.automatic} onChange={(value) => void setPrefs({ updates: { automatic: value } })} />}
+                />
+                <Row
+                  title="Early bird releases"
+                  description="Include release candidates a few days before the stable build. Slightly higher chance of rough edges."
                   control={<Toggle checked={prefs.productivity.earlyBird} onChange={(value) => setProductivity({ earlyBird: value })} />}
+                />
+                <Row
+                  title="Status"
+                  description={
+                    updateState?.checkedAt
+                      ? `Checked ${new Date(updateState.checkedAt).toLocaleString()}${updateState.latest ? ` · newest release ${updateState.latest}` : ''}`
+                      : 'Not checked yet in this session.'
+                  }
+                  control={
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <span className={`badge ${updateState?.status === 'available' ? 'warn' : updateState?.status === 'current' ? 'ok' : ''}`}>
+                        {updateState?.status === 'available'
+                          ? `${updateState.latest} available`
+                          : updateState?.status === 'current'
+                            ? 'Up to date'
+                            : updateState?.status === 'offline'
+                              ? 'Could not reach GitHub'
+                              : updateState?.status === 'checking'
+                                ? 'Checking…'
+                                : 'Idle'}
+                      </span>
+                      <button
+                        className="pill-btn"
+                        disabled={checkingUpdate}
+                        onClick={async () => {
+                          setCheckingUpdate(true);
+                          const state = await api.updates.check();
+                          setCheckingUpdate(false);
+                          setUpdateState(state);
+                          if (state.status === 'available' && state.notesUrl) {
+                            toast(`Kimmino ${state.latest} is available`, 'info');
+                          } else if (state.status === 'current') {
+                            toast('You are on the newest release', 'success');
+                          } else if (state.status === 'offline') {
+                            toast('Could not reach GitHub', 'warn');
+                          }
+                        }}
+                      >
+                        {checkingUpdate ? 'Checking…' : 'Check now'}
+                      </button>
+                      {updateState?.status === 'available' && updateState.notesUrl && (
+                        <>
+                          <button className="pill-btn primary" onClick={() => void api.system.openExternal(updateState.notesUrl!)}>
+                            What changed
+                          </button>
+                          <button
+                            className="pill-btn ghost"
+                            title="Stop reminding me about this release"
+                            onClick={async () => {
+                              await api.updates.dismiss(updateState.latest ?? '');
+                              setUpdateState({ ...updateState, status: 'current' });
+                              toast('You will not be reminded about this release', 'info');
+                            }}
+                          >
+                            Skip
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  }
                 />
                 <Row title="Version" control={<span className="badge">{api.version} · {api.platform}</span>} />
                 <Row title="Licences" description="Chromium, EasyList, uBlock Origin filters, Inter and Space Grotesk fonts." control={<button className="pill-btn" onClick={() => api.system.openExternal('https://kimmino.vercel.app/licenses')}>Read</button>} />
@@ -1215,8 +1356,8 @@ function ZipInstall() {
         onClick={async () => {
           setBusy(true);
           try {
-            const info = await api.extensions.installFromUrl(url.trim());
-            toast(info ? `Installed ${info.name}` : 'Install failed', info ? 'success' : 'warn');
+            const result = await api.extensions.installFromUrl(url.trim());
+            if (result.message !== 'Cancelled.') toast(result.message, result.ok ? 'success' : 'warn');
             await reloadData();
           } catch (error) {
             toast((error as Error).message, 'warn');

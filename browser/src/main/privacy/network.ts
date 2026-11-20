@@ -63,6 +63,14 @@ export function applyNetworkPrivacy(ses: Session, ctx: NetworkPrivacyContext): (
     const url = details.url;
     if (!/^https?:/i.test(url)) return callback({});
 
+    // 0. HTTPS-only: upgrade top-level http navigations. Local and private
+    //    hosts are left alone, and custom ports are skipped because most of them
+    //    have no TLS listener.
+    if (p.privacy.httpsOnly && details.resourceType === 'mainFrame' && details.method === 'GET' && url.startsWith('http://')) {
+      const upgraded = upgradeToHttps(url);
+      if (upgraded) return callback({ redirectURL: upgraded });
+    }
+
     const documentUrl = details.frame?.url || details.referrer || undefined;
     const third = isThirdParty(url, documentUrl);
     const wcId = details.webContentsId;
@@ -222,3 +230,22 @@ export function safeHost(rawUrl: string): string {
 }
 
 export { CHROME_UA };
+
+/** http → https for public hosts that can plausibly serve TLS. */
+export function upgradeToHttps(rawUrl: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'http:') return null;
+  if (parsed.port && parsed.port !== '80') return null;
+  const host = parsed.hostname.toLowerCase();
+  if (!host || host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal')) return null;
+  if (host === '::1' || host === '[::1]') return null;
+  if (/^127\./.test(host) || /^10\./.test(host) || /^192\.168\./.test(host) || /^169\.254\./.test(host)) return null;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return null;
+  parsed.protocol = 'https:';
+  return parsed.toString();
+}
