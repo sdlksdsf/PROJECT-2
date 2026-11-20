@@ -106,7 +106,11 @@ jobs:
           grep -q "SMOKE memory" smoke.out || true
 
           echo "launch verified: real pages load, tabs close, screenshots capture"
-          grep "SMOKE memory" smoke.out >> "$GITHUB_STEP_SUMMARY" || true
+
+          # The numbers behind the claims on the download page, published as a
+          # check annotation so they can be read without downloading artifacts.
+          SUMMARY=$(grep -E "SMOKE (ok|fail|memory)" smoke.out | tr '\n' ';' || true)
+          echo "::notice title=Kimmino packaged-app smoke::${SUMMARY}"
 
       - name: Report launch failure
         if: failure()
