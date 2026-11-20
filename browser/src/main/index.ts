@@ -102,6 +102,9 @@ try {
   // A corrupt or missing marker means "use the default", never a crash loop.
 }
 
+// The packaged version is the single source of truth for "which build is this".
+process.env.KIMMINO_VERSION = app.getVersion();
+
 const isDev = !app.isPackaged;
 const rendererDevUrl = process.env.ELECTRON_RENDERER_URL ?? null;
 

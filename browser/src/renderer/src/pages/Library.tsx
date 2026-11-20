@@ -686,7 +686,7 @@ export function AboutPage() {
             K
           </div>
           <div>
-            <h1 style={{ marginBottom: 4 }}>Kimmino 1.0.0</h1>
+            <h1 style={{ marginBottom: 4 }}>Kimmino {api.version}</h1>
             <div style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>
               A private, fast, open-source browser · built on Chromium {isNative ? '140' : '(preview)'}
             </div>

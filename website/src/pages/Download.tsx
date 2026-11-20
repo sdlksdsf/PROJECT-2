@@ -10,25 +10,34 @@ import {
   HardDriveDownload,
   Info,
   Laptop,
+  Languages,
+  Palette,
   Monitor,
   ShieldCheck,
+  Sparkles,
   Terminal,
   Timer
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Reveal, SectionHead } from '../components/Chrome';
-import { DOWNLOADS, PLATFORM_LABEL, SITE, usePlatform, type Platform } from '../lib/site';
-import { sizeFor, useLatestRelease } from '../lib/release';
+import { PLATFORM_LABEL, SITE, usePlatform, type Platform } from '../lib/site';
+import { assetName, assetUrl, sizeFor, useLatestRelease } from '../lib/release';
+
+interface Installer {
+  /** Stable tail of the file name, e.g. `-win-x64.exe` — survives every version bump. */
+  suffix: string;
+  /** Name published by the current release, used until the GitHub API answers. */
+  fallback: string;
+  label: string;
+}
 
 const OS_CARDS: Array<{
   id: Exclude<Platform, 'unknown'>;
   name: string;
   icon: typeof Monitor;
   requirement: string;
-  primary: string;
-  primaryLabel: string;
-  secondary?: string;
-  secondaryLabel?: string;
+  primary: Installer;
+  secondary?: Installer;
   note: string;
 }> = [
   {
@@ -36,10 +45,8 @@ const OS_CARDS: Array<{
     name: 'Windows',
     icon: Monitor,
     requirement: 'Windows 10 1809 or newer · 64-bit · 300 MB free',
-    primary: DOWNLOADS.windows,
-    primaryLabel: 'Windows installer (.exe)',
-    secondary: DOWNLOADS.windowsArm,
-    secondaryLabel: 'Windows on ARM',
+    primary: { suffix: '-win-x64.exe', fallback: 'Kimmino-1.1.0-win-x64.exe', label: 'Windows installer (.exe)' },
+    secondary: { suffix: '-win-arm64.exe', fallback: 'Kimmino-1.1.0-win-arm64.exe', label: 'Windows on ARM' },
     note: 'Unsigned NSIS installer with per-user install, file associations and an uninstaller. No admin rights required — see the SmartScreen note below.'
   },
   {
@@ -47,10 +54,8 @@ const OS_CARDS: Array<{
     name: 'macOS',
     icon: Apple,
     requirement: 'macOS 12 Monterey or newer · Apple silicon or Intel',
-    primary: DOWNLOADS.mac,
-    primaryLabel: 'macOS · Apple silicon (.dmg)',
-    secondary: DOWNLOADS.macIntel,
-    secondaryLabel: 'macOS · Intel',
+    primary: { suffix: '-mac-arm64.dmg', fallback: 'Kimmino-1.1.0-mac-arm64.dmg', label: 'macOS · Apple silicon (.dmg)' },
+    secondary: { suffix: '-mac-x64.dmg', fallback: 'Kimmino-1.1.0-mac-x64.dmg', label: 'macOS · Intel' },
     note: 'Separate Apple silicon and Intel builds, hardened runtime, unsigned. Drag to Applications, then right-click → Open once.'
   },
   {
@@ -58,30 +63,28 @@ const OS_CARDS: Array<{
     name: 'Linux',
     icon: Terminal,
     requirement: 'glibc 2.31+ · x86_64 · AppImage or deb',
-    primary: DOWNLOADS.linux,
-    primaryLabel: 'AppImage (portable)',
-    secondary: DOWNLOADS.linuxDeb,
-    secondaryLabel: 'Debian / Ubuntu (.deb)',
+    primary: { suffix: '-linux-x86_64.AppImage', fallback: 'Kimmino-1.1.0-linux-x86_64.AppImage', label: 'AppImage (portable)' },
+    secondary: { suffix: '_amd64.deb', fallback: 'kimmino_1.1.0_amd64.deb', label: 'Debian / Ubuntu (.deb)' },
     note: 'No root needed for the AppImage. Sandbox helper ships inside the bundle.'
   }
 ];
 
-const STEPS_WIN = [
-  ['Run the installer', 'Double-click Kimmino-1.0.0-win-x64.exe. Windows SmartScreen may show a warning for new publishers — choose “More info → Run anyway”, or verify the SHA-256 checksum first.'],
+const STEPS_WIN = (exe: string): Array<[string, string]> => [
+  ['Run the installer', `Double-click ${exe}. Windows SmartScreen may show a warning for new publishers — choose “More info → Run anyway”, or verify the SHA-256 checksum first.`],
   ['Choose install location', 'Per-user install by default (%LOCALAPPDATA%\\Programs\\Kimmino) so no administrator prompt appears.'],
   ['Pick your profile', 'On first launch choose “New profile” or import from Chrome, Edge, Firefox, Brave or Opera.'],
   ['Make it default (optional)', 'Kimmino asks once. You can always change default browser from Windows Settings → Apps → Default apps.']
 ];
 
-const STEPS_MAC = [
-  ['Open the DMG', 'Mount Kimmino-1.0.0-mac-arm64.dmg and drag Kimmino into Applications.'],
+const STEPS_MAC = (dmg: string): Array<[string, string]> => [
+  ['Open the DMG', `Mount ${dmg} and drag Kimmino into Applications.`],
   ['First launch', 'If Gatekeeper blocks an unnotarised build, right-click → Open once, or run xattr -dr com.apple.quarantine /Applications/Kimmino.app.'],
   ['Import your data', 'The first-run wizard offers bookmarks, history and passwords from Safari, Chrome, Firefox and Brave.']
 ];
 
-const STEPS_LINUX = [
-  ['Make it executable', 'chmod +x Kimmino-1.0.0-linux-x86_64.AppImage'],
-  ['Run it', './Kimmino-1.0.0-linux-x86_64.AppImage — or install the .deb with sudo apt install ./kimmino_1.0.0_amd64.deb'],
+const STEPS_LINUX = (appimage: string, deb: string): Array<[string, string]> => [
+  ['Make it executable', `chmod +x ${appimage}`],
+  ['Run it', `./${appimage} — or install the .deb with sudo apt install ./${deb}`],
   ['Wayland note', 'Run with --ozone-platform=wayland for native fractional scaling; XWayland works out of the box.']
 ];
 
@@ -90,13 +93,22 @@ export function DownloadPage() {
   const [selected, setSelected] = useState<Exclude<Platform, 'unknown'>>('windows');
   const active = platform === 'unknown' ? selected : platform;
   const release = useLatestRelease();
+  const href = (installer: Installer) => assetUrl(installer.suffix, installer.fallback, release.assets);
+  const fileName = (installer: Installer) => assetName(installer.suffix, installer.fallback, release.assets);
+  const liveVersion = release.tag ? release.tag.replace(/^v/, '') : SITE.version;
+  const steps =
+    active === 'windows'
+      ? STEPS_WIN(fileName(OS_CARDS[0].primary))
+      : active === 'mac'
+        ? STEPS_MAC(fileName(OS_CARDS[1].primary))
+        : STEPS_LINUX(fileName(OS_CARDS[2].primary), fileName(OS_CARDS[2].secondary!));
 
   return (
     <>
       <section className="dl-hero">
         <div className="container">
           <span className="eyebrow">
-            <ShieldCheck size={13} /> Version {SITE.version} · Chromium 144
+            <ShieldCheck size={13} /> Version {liveVersion} · Chromium 144
             {release.publishedLabel ? ` · installers published ${release.publishedLabel}` : ' · built by public CI'}
           </span>
           <h1>
@@ -104,7 +116,7 @@ export function DownloadPage() {
           </h1>
           <p className="hero-sub" style={{ margin: '0 auto' }}>
             One installer, no bundled extras. The Windows build is{' '}
-            {sizeFor(DOWNLOADS.windows, release.assets) ?? '123 MB'} — the exact figure, not a rounded-down one —
+            {sizeFor(href(OS_CARDS[0].primary), release.assets) ?? '118 MB'} — the exact figure, not a rounded-down one —
             checksummed and reproducible from the public source.
           </p>
           <div className="hero-meta" style={{ marginTop: 20 }}>
@@ -113,6 +125,50 @@ export function DownloadPage() {
             <span><HardDriveDownload size={13} /> No account required</span>
             <span><Github size={13} /> Source available</span>
           </div>
+        </div>
+      </section>
+
+      <section className="section tight">
+        <div className="container">
+          <SectionHead
+            center
+            eyebrow={`New in ${liveVersion}`}
+            title="The build behind these buttons"
+            body={`Every link above resolves to the newest release (currently ${release.tag ?? `v${SITE.version}`}). If your installed copy does not have these, it is an older build — reinstall from this page.`}
+          />
+          <div className="feature-grid">
+            {[
+              {
+                icon: Palette,
+                title: '34 themes, plus your own',
+                body: 'Dark, Light, Cat, Anime and Mine ship built in, alongside a theme studio for custom palettes that follow your accent colour everywhere.'
+              },
+              {
+                icon: Languages,
+                title: '14 languages, including RTL',
+                body: 'Arabic and Urdu render right-to-left across the whole interface, with the rest of the language pack switched from Settings → Appearance.'
+              },
+              {
+                icon: Sparkles,
+                title: 'Assistant, walls and privacy defaults',
+                body: 'A built-in assistant, 22 wallpapers, tracker blocking on by default, and every setting on this page reachable without an account.'
+              }
+            ].map((item, index) => (
+              <Reveal className="feature-card" key={item.title} delay={index * 40} as="article">
+                <div className="feature-icon">
+                  <item.icon size={19} />
+                </div>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal>
+            <p className="small muted" style={{ marginTop: 18, textAlign: 'center' }}>
+              Check which build you have: <strong>Settings → About</strong> shows <code>Kimmino {SITE.version}</code>.
+              Anything earlier is the pre-theme release.
+            </p>
+          </Reveal>
         </div>
       </section>
 
@@ -142,20 +198,20 @@ export function DownloadPage() {
                       </div>
                     </div>
                     <p className="os-req">{card.requirement}</p>
-                    <a className="btn btn-primary btn-sm" href={card.primary} style={{ width: '100%' }}>
-                      <Download size={14} /> {card.primaryLabel}
-                      {sizeFor(card.primary, release.assets) && (
+                    <a className="btn btn-primary btn-sm" href={href(card.primary)} style={{ width: '100%' }}>
+                      <Download size={14} /> {card.primary.label}
+                      {sizeFor(href(card.primary), release.assets) && (
                         <span style={{ marginLeft: 6, opacity: 0.72, fontSize: 12 }}>
-                          · {sizeFor(card.primary, release.assets)}
+                          · {sizeFor(href(card.primary), release.assets)}
                         </span>
                       )}
                     </a>
                     {card.secondary && (
-                      <a className="btn btn-ghost btn-sm" href={card.secondary} style={{ width: '100%', marginTop: 8 }}>
-                        {card.secondaryLabel}
-                        {sizeFor(card.secondary, release.assets) && (
+                      <a className="btn btn-ghost btn-sm" href={href(card.secondary)} style={{ width: '100%', marginTop: 8 }}>
+                        {card.secondary.label}
+                        {sizeFor(href(card.secondary), release.assets) && (
                           <span style={{ marginLeft: 6, opacity: 0.7, fontSize: 12 }}>
-                            · {sizeFor(card.secondary, release.assets)}
+                            · {sizeFor(href(card.secondary), release.assets)}
                           </span>
                         )}
                       </a>
@@ -198,7 +254,7 @@ export function DownloadPage() {
           <div className="split">
             <Reveal>
               <div className="steps">
-                {(active === 'windows' ? STEPS_WIN : active === 'mac' ? STEPS_MAC : STEPS_LINUX).map(([title, body], index) => (
+                {steps.map(([title, body], index) => (
                   <div className="step" key={title}>
                     <span className="step-num">{index + 1}</span>
                     <div>
@@ -285,9 +341,9 @@ npm run typecheck
 
 # 5 · build installers for your OS
 npm run package
-#   → browser/release/Kimmino-1.0.0-*.exe
-#   → browser/release/Kimmino-1.0.0-*.dmg
-#   → browser/release/Kimmino-1.0.0-*.AppImage`}</pre>
+#   → browser/release/Kimmino-<version>-*.exe
+#   → browser/release/Kimmino-<version>-*.dmg
+#   → browser/release/Kimmino-<version>-*.AppImage`}</pre>
             </Reveal>
           </div>
         </div>

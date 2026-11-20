@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { APP_VERSION } from '../shared/defaults';
 import type {
   AiMessage,
   Bookmark,
@@ -37,7 +38,7 @@ function subscribe<T>(channel: string, callback: (payload: T) => void): () => vo
 
 const api: KimminoApi = {
   platform: process.platform,
-  version: process.env.KIMMINO_VERSION ?? '1.0.0',
+  version: process.env.KIMMINO_VERSION ?? APP_VERSION,
   isNative: true,
 
   window: {

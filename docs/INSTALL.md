@@ -16,7 +16,7 @@ Kimmino ships one installer per platform. Nothing runs in the background after i
 
 **Requirements:** Windows 10 1809 or newer (Windows 11 supported), 64-bit x64 or ARM64, 4 GB RAM, 300 MB free disk.
 
-1. Download `Kimmino-1.0.0-win-x64.exe` (or `-win-arm64.exe` on a Snapdragon/ARM device) from [Releases](https://github.com/sdlksdsf/PROJECT-2/releases/latest).
+1. Download `Kimmino-1.1.0-win-x64.exe` (or `-win-arm64.exe` on a Snapdragon/ARM device) from [Releases](https://github.com/sdlksdsf/PROJECT-2/releases/latest).
 2. Run it. Because early builds are not yet code-signed, SmartScreen may show **"Windows protected your PC"**.
    - Click **More info**, then **Run anyway**.
    - If you prefer certainty, follow [verifying your download](#verifying-your-download) first.
@@ -39,7 +39,7 @@ Kimmino asks once on first launch. Windows will open **Settings → Apps → Def
 
 ```powershell
 # silent install for all users of a machine
-Kimmino-1.0.0-win-x64.exe /S /D="C:\Program Files\Kimmino"
+Kimmino-1.1.0-win-x64.exe /S /D="C:\Program Files\Kimmino"
 
 # pre-seed a hardened profile
 kimmino.exe --profile fleet --policy hardened
@@ -53,7 +53,7 @@ Per-machine installs work but are not the default because they need elevation; t
 
 **Requirements:** macOS 12 Monterey or newer, Apple silicon or Intel, 300 MB free disk.
 
-1. Download `Kimmino-1.0.0-mac-arm64.dmg` (Apple silicon) or `Kimmino-1.0.0-mac-x64.dmg` (Intel).
+1. Download `Kimmino-1.1.0-mac-arm64.dmg` (Apple silicon) or `Kimmino-1.1.0-mac-x64.dmg` (Intel).
 2. Open the image and drag **Kimmino** into **Applications**.
 3. Launch it from Applications. If macOS says the app cannot be opened because the developer cannot be verified, right-click the app → **Open** → **Open** once. This is Gatekeeper's standard behaviour for unnotarised builds — CI produces unsigned installers, and signing certificates are not part of this release.
 
@@ -72,14 +72,14 @@ xattr -dr com.apple.quarantine /Applications/Kimmino.app
 ### AppImage (portable, recommended)
 
 ```bash
-chmod +x Kimmino-1.0.0-linux-x86_64.AppImage
-./Kimmino-1.0.0-linux-x86_64.AppImage
+chmod +x Kimmino-1.1.0-linux-x86_64.AppImage
+./Kimmino-1.1.0-linux-x86_64.AppImage
 ```
 
 Optional desktop integration:
 
 ```bash
-./Kimmino-1.0.0-linux-x86_64.AppImage --appimage-extract
+./Kimmino-1.1.0-linux-x86_64.AppImage --appimage-extract
 sudo mv squashfs-root /opt/kimmino
 sudo ln -s /opt/kimmino/AppRun /usr/local/bin/kimmino
 ```
@@ -87,7 +87,7 @@ sudo ln -s /opt/kimmino/AppRun /usr/local/bin/kimmino
 ### Debian / Ubuntu (.deb)
 
 ```bash
-sudo apt install ./kimmino_1.0.0_amd64.deb
+sudo apt install ./kimmino_1.1.0_amd64.deb
 ```
 
 The package installs to `/opt/Kimmino`, adds a launcher in the *Internet* category, and registers `x-scheme-handler/http` and `https` with `update-alternatives`.
@@ -119,14 +119,14 @@ Every release publishes `SHA256SUMS.txt` alongside the binaries.
 **Windows (PowerShell):**
 
 ```powershell
-Get-FileHash .\Kimmino-1.0.0-win-x64.exe -Algorithm SHA256
+Get-FileHash .\Kimmino-1.1.0-win-x64.exe -Algorithm SHA256
 ```
 
 **macOS / Linux:**
 
 ```bash
-shasum -a 256 Kimmino-1.0.0-*.dmg
-sha256sum Kimmino-1.0.0-linux-x86_64.AppImage
+shasum -a 256 Kimmino-1.1.0-*.dmg
+sha256sum Kimmino-1.1.0-linux-x86_64.AppImage
 ```
 
 Compare the output with the matching line in the release's `SHA256SUMS.txt`. If it does not match, delete the file and download again — do not run it.
@@ -202,7 +202,7 @@ Kimmino never quits silently any more: if a launch cannot produce a window it ei
    - Linux: `~/.config/Kimmino/startup.log`
 
    It records the version, build commit, instance-lock decision, every window step and any fatal error — the last line names the exact step that died, and fatal errors also raise a native message box pointing at this file.
-4. **Run it from a terminal** to see stderr directly: `"%LOCALAPPDATA%\Programs\Kimmino\Kimmino.exe"` (PowerShell), `open -a Kimmino` (macOS), or `./Kimmino-1.0.0-linux-x86_64.AppImage` (Linux).
+4. **Run it from a terminal** to see stderr directly: `"%LOCALAPPDATA%\Programs\Kimmino\Kimmino.exe"` (PowerShell), `open -a Kimmino` (macOS), or `./Kimmino-1.1.0-linux-x86_64.AppImage` (Linux).
 5. **Try safe mode if the window never paints.** Some Windows 11 GPU drivers crash Chromium during startup:
 
    ```powershell

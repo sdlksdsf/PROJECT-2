@@ -1,9 +1,9 @@
 {
   "name": "@kimmino/browser",
   "productName": "Kimmino",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Kimmino browser — fast, private, open source.",
+  "description": "Kimmino browser \u2014 fast, private, open source.",
   "main": "./out/main/index.js",
   "author": {
     "name": "Kimmino Contributors",

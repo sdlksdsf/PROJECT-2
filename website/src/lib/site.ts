@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 export const SITE = {
   name: 'Kimmino',
-  version: '1.0.0',
+  version: '1.1.0',
   repo: 'https://github.com/sdlksdsf/PROJECT-2',
   releases: 'https://github.com/sdlksdsf/PROJECT-2/releases/latest',
   discord: 'https://github.com/sdlksdsf/PROJECT-2/discussions',
@@ -10,13 +10,17 @@ export const SITE = {
   security: 'security@kimmino.app'
 };
 
+const V = SITE.version;
+
+/** Canonical names for the build this site ships. Callers should resolve through
+ * `assetUrl()` in `lib/release.ts`, which follows the newest GitHub release. */
 export const DOWNLOADS = {
-  windows: `${SITE.releases}/download/Kimmino-1.0.0-win-x64.exe`,
-  windowsArm: `${SITE.releases}/download/Kimmino-1.0.0-win-arm64.exe`,
-  mac: `${SITE.releases}/download/Kimmino-1.0.0-mac-arm64.dmg`,
-  macIntel: `${SITE.releases}/download/Kimmino-1.0.0-mac-x64.dmg`,
-  linux: `${SITE.releases}/download/Kimmino-1.0.0-linux-x86_64.AppImage`,
-  linuxDeb: `${SITE.releases}/download/kimmino_1.0.0_amd64.deb`
+  windows: `${SITE.releases}/download/Kimmino-${V}-win-x64.exe`,
+  windowsArm: `${SITE.releases}/download/Kimmino-${V}-win-arm64.exe`,
+  mac: `${SITE.releases}/download/Kimmino-${V}-mac-arm64.dmg`,
+  macIntel: `${SITE.releases}/download/Kimmino-${V}-mac-x64.dmg`,
+  linux: `${SITE.releases}/download/Kimmino-${V}-linux-x86_64.AppImage`,
+  linuxDeb: `${SITE.releases}/download/kimmino_${V}_amd64.deb`
 };
 
 export type Platform = 'windows' | 'mac' | 'linux' | 'unknown';

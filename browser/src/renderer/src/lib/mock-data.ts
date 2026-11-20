@@ -84,7 +84,7 @@ export const SEED_CUSTOM_THEME: ThemeDefinition = {
   id: 'custom_midnight_mint',
   name: 'Midnight Mint',
   author: 'community',
-  version: '1.0.0',
+  version: '1.1.0',
   isDark: true,
   builtin: false,
   colors: {
