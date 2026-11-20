@@ -124,13 +124,15 @@
   border-radius: 5px;
   display: grid;
   place-items: center;
-  opacity: 0;
+  /* Always visible. A control that only appears on hover does not exist on a
+     touchpad or a touchscreen. */
+  opacity: 0.5;
   transition: opacity var(--dur-fast), background var(--dur-fast);
   flex: 0 0 auto;
 }
 .tab:hover .tab-close,
 .tab.is-active .tab-close {
-  opacity: 0.75;
+  opacity: 0.9;
 }
 .tab-close:hover {
   background: var(--active);

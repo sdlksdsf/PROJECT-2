@@ -31,7 +31,9 @@ export async function capture(wc: WebContents, mode: CaptureMode, prefs: Prefere
 
     const format = prefs.productivity.screenshotFormat;
     const ext = format === 'jpeg' ? 'jpg' : 'png';
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    // Millisecond precision: two captures in the same second used to overwrite
+    // each other, so the second screenshot silently replaced the first.
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23);
     const host = hostOf(wc.getURL()) || 'page';
     const file = path.join(screenshotsDir(), `${host}-${stamp}.${ext}`);
 
@@ -41,16 +43,28 @@ export async function capture(wc: WebContents, mode: CaptureMode, prefs: Prefere
       output = image.toJPEG(92);
     }
     fs.writeFileSync(file, output);
-    // Electron 45 ships a W3C-style async clipboard type definition; the
-    // main-process image API is still the classic synchronous one.
-    (clipboard as unknown as { writeImage: (image: Electron.NativeImage) => void }).writeImage(
-      nativeImage.createFromBuffer(buffer)
-    );
+    // Clipboard failure is not capture failure. On Linux/Wayland the clipboard
+    // is frequently unavailable; reporting the whole screenshot as broken made
+    // it look like the feature did not work.
+    let copied = true;
+    try {
+      // Electron 45 ships a W3C-style async clipboard type definition; the the
+      // main-process image API is still the classic synchronous one.
+      (clipboard as unknown as { writeImage: (image: Electron.NativeImage) => void }).writeImage(
+        nativeImage.createFromBuffer(output)
+      );
+    } catch {
+      copied = false;
+    }
 
+    // The preview must describe the bytes we actually saved, or the browser
+    // hands a JPEG payload to an <img> tag labelled PNG.
+    const mime = format === 'jpeg' ? 'image/jpeg' : 'image/png';
     return {
       ok: true,
       path: file,
-      dataUrl: `data:image/png;base64,${buffer.toString('base64')}`
+      copied,
+      dataUrl: `data:${mime};base64,${output.toString('base64')}`
     };
   } catch (err) {
     return { ok: false, error: (err as Error).message };
@@ -62,7 +76,7 @@ export async function saveSelection(dataUrl: string, prefs: Preferences): Promis
     const base64 = dataUrl.split(',')[1] ?? '';
     const buffer = Buffer.from(base64, 'base64');
     const ext = prefs.productivity.screenshotFormat === 'jpeg' ? 'jpg' : 'png';
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23);
     const file = path.join(screenshotsDir(), `selection-${stamp}.${ext}`);
     fs.writeFileSync(file, buffer);
     // Electron 45 ships a W3C-style async clipboard type definition; the

@@ -12,8 +12,12 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..');
+const ESSENTIAL = JSON.parse(
+  await fs.readFile(path.join(REPO_ROOT, 'browser', 'src', 'shared', 'essential-hosts.json'), 'utf8')
+);
 const OUT_DIR = path.join(REPO_ROOT, 'browser', 'resources', 'filters');
 
 const SOURCES = [
@@ -50,13 +54,35 @@ const COSMETIC_DOMAIN_CAP = 60_000;
 const PATH_RULE_CAP = 26_000;
 const MAX_REGEX_SOURCE = 180;
 
+/**
+ * GitHub contents API, fetched with Node's fetch and falling back to curl.
+ * Node ships its own CA store, so a machine behind a TLS-inspecting proxy (a
+ * corporate laptop, a sandbox) fails certificate verification even though the
+ * system trusts it. curl uses the system store, so the second attempt works.
+ */
+async function fetchJson(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { accept: 'application/vnd.github+json', 'user-agent': 'kimmino-filter-compiler' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (error) {
+    try {
+      const out = execFileSync('curl', ['-sSL', '--max-time', '90', '-H', 'user-agent: kimmino-filter-compiler', url], {
+        maxBuffer: 64 * 1024 * 1024,
+        encoding: 'utf8'
+      });
+      return JSON.parse(out);
+    } catch {
+      throw new Error(`${error && error.message ? error.message : String(error)} (curl fallback failed too)`);
+    }
+  }
+}
+
 async function fetchList(source) {
   const url = `https://api.github.com/repos/${source.repo}/contents/${source.file}?ref=${source.ref}`;
-  const res = await fetch(url, {
-    headers: { accept: 'application/vnd.github+json', 'user-agent': 'kimmino-filter-compiler' }
-  });
-  if (!res.ok) throw new Error(`${source.id}: HTTP ${res.status}`);
-  const json = await res.json();
+  const json = await fetchJson(url);
   if (!json.content) throw new Error(`${source.id}: no content`);
   const text = Buffer.from(json.content, 'base64').toString('utf8');
   return { text, size: json.size };
@@ -120,6 +146,7 @@ async function main() {
     cosmetic: { selectors: new Map(), generic: new Set() }
   };
 
+  const failed = [];
   for (const source of SOURCES) {
     let text;
     try {
@@ -129,6 +156,7 @@ async function main() {
       process.stdout.write(`  ok  ${source.id.padEnd(24)} ${(res.size / 1024).toFixed(0)} kB\n`);
     } catch (err) {
       process.stdout.write(`  !!  ${source.id}: ${err.message}\n`);
+      failed.push(source.id);
       continue;
     }
 
@@ -210,7 +238,18 @@ async function main() {
           addPathRule(bucket.patterns, pattern);
           continue;
         }
-        if (!isException && options.includes('third-party') === false && options.includes('~third-party')) continue;
+        // `||host^` means "block this host". Options narrow that meaning: a
+        // `$popup` or `$doc` rule covers popups or documents only, and
+        // promoting it to a whole-host block is how `||youtube.com^$popup`
+        // used to take YouTube offline. Only honour options that mean exactly
+        // the same thing as a plain block.
+        const optionList = options ? options.split(',').map((o) => o.trim().toLowerCase()).filter(Boolean) : [];
+        const wholeHost = optionList.length === 0 || optionList.every((o) => o === 'third-party' || o === '3p');
+        // An exception with options is narrower than "this whole host is
+        // safe": `@@||ad.doubleclick.net^$domain=a.com` only exempts that one
+        // site. Treating it as a global allow is how ad servers ended up on the
+        // allowlist. Only bare rules become host-level decisions.
+        if (!wholeHost) continue;
         bucket.domains.add(domain);
       } else if (pattern.startsWith('|') || pattern.includes('*')) {
         addPathRule(bucket.patterns, pattern.replace(/^\|/, '').replace(/\|$/, ''));
@@ -218,6 +257,34 @@ async function main() {
         addPathRule(bucket.patterns, pattern);
       }
     }
+  }
+
+  // Refuse to overwrite a good bundle with a gutted one: a filtered-down list
+  // is worse than no update, because it silently stops blocking anything.
+  if (failed.length) {
+    throw new Error(`${failed.length} filter source(s) could not be downloaded (${failed.join(', ')}) — nothing written`);
+  }
+  if (!bundle.ads.domains.size || !bundle.trackers.domains.size) {
+    throw new Error('compiled bundle is empty — refusing to overwrite default-filters.json');
+  }
+
+  // A site may not be both allowed and blocked, and the hosts the browser has to
+  // be able to reach are off limits to every list.
+  const essential = ESSENTIAL.neverBlock;
+  const conflicts = [];
+  const isReserved = (domain) => essential.some((host) => domain === host || domain.endsWith(`.${host}`));
+  for (const group of ['ads', 'trackers', 'malware', 'popups', 'cookies']) {
+    for (const domain of [...bundle[group].domains]) {
+      if (isReserved(domain) || bundle.allow.domains.has(domain)) {
+        bundle[group].domains.delete(domain);
+        conflicts.push(`${group}:${domain}`);
+      }
+    }
+  }
+  if (conflicts.length) {
+    console.log(`\nDropped ${conflicts.length} rule(s) that would have broken a site:`);
+    for (const entry of conflicts.slice(0, 20)) console.log(`  - ${entry}`);
+    if (conflicts.length > 20) console.log(`  … ${conflicts.length - 20} more`);
   }
 
   const out = {
@@ -243,6 +310,15 @@ async function main() {
       byDomain: Object.fromEntries([...bundle.cosmetic.selectors].map(([k, v]) => [k, v]))
     }
   };
+
+  // Fail the build rather than ship a bundle that bricks a top site.
+  for (const host of essential) {
+    for (const group of ['ads', 'trackers', 'malware', 'popups']) {
+      if (out[group].domains.includes(host)) {
+        throw new Error(`${host} is on the never-block list but ended up in the ${group} list`);
+      }
+    }
+  }
 
   await fs.mkdir(OUT_DIR, { recursive: true });
   const json = JSON.stringify(out);

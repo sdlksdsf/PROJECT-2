@@ -272,7 +272,23 @@ function VerticalTabsMount() {
 function handleShortcut(action: string) {
   const state = useStore.getState();
   const active = state.activeTab();
+
+  // Tab 1-8 jump by position, 9 goes to the last tab. The menu advertised these
+  // accelerators but nothing was listening for them.
+  const tabSlot = /^tab-(\d)$/.exec(action);
+  if (tabSlot) {
+    const slot = Number(tabSlot[1]);
+    const target = slot === 9
+      ? state.windowState.tabs[state.windowState.tabs.length - 1]
+      : state.windowState.tabs[slot - 1];
+    if (target) void api.tabs.activate(target.id);
+    return;
+  }
+
   switch (action) {
+    case 'focus-omnibox':
+      state.focusOmnibox();
+      break;
     case 'reload':
       api.tabs.reload();
       break;
@@ -355,6 +371,9 @@ function handleShortcut(action: string) {
       if (prev) void api.tabs.activate(prev.id);
       break;
     }
+    case 'close-tab':
+      if (active) void api.tabs.close(active.id);
+      break;
     case 'reopen-tab':
       void api.tabs.reopenClosed();
       break;

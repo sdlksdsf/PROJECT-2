@@ -1,30 +1,4 @@
-import { SEARCH_ENGINES } from '@shared/defaults';
-
-const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
-const HOST_LIKE = /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?(\/.*)?$/i;
-
-/** Turn whatever the user typed into a URL, or a search query. */
-export function toUrl(input: string, engineId: string, customEngineUrl: string): string {
-  const value = input.trim();
-  if (!value) return 'kimmino://newtab';
-  if (value.startsWith('kimmino://')) return value;
-  if (SCHEME_RE.test(value)) return value;
-
-  const looksLikeHost =
-    HOST_LIKE.test(value) ||
-    value.startsWith('localhost') ||
-    /^\d{1,3}(\.\d{1,3}){3}(:\d+)?/.test(value);
-  if (looksLikeHost && !value.includes(' ')) {
-    return `https://${value}`;
-  }
-  return searchUrl(value, engineId, customEngineUrl);
-}
-
-export function searchUrl(query: string, engineId: string, customEngineUrl: string): string {
-  const engine = SEARCH_ENGINES[engineId] ?? SEARCH_ENGINES.duckduckgo;
-  const template = engineId === 'custom' && customEngineUrl ? customEngineUrl : engine.url;
-  return (template || 'https://duckduckgo.com/?q=%s').replace('%s', encodeURIComponent(query));
-}
+export { engineName, isSearchQuery, searchUrl, toUrl } from '@shared/navigation';
 
 export function prettyUrl(rawUrl: string): { host: string; path: string; secure: boolean } {
   try {

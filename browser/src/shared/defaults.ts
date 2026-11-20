@@ -30,6 +30,13 @@ export const SEARCH_ENGINES: Record<string, { name: string; url: string; suggest
   custom: { name: 'Custom', url: '' }
 };
 
+/**
+ * Engine used when a preference is missing or points at an engine that no
+ * longer exists. Kept as one constant so the app, the address bar and the
+ * start page cannot disagree about it.
+ */
+export const DEFAULT_SEARCH_ENGINE = 'duckduckgo';
+
 export const DEFAULT_DIALS = [
   { id: 'd1', title: 'YouTube', url: 'https://www.youtube.com', icon: null },
   { id: 'd2', title: 'GitHub', url: 'https://github.com', icon: null },
@@ -136,7 +143,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   },
 
   search: {
-    engine: 'duckduckgo',
+    engine: DEFAULT_SEARCH_ENGINE,
     customEngineUrl: '',
     suggestions: true,
     autocompleteHistory: true,

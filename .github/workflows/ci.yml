@@ -29,7 +29,6 @@ jobs:
 
       - name: Unit tests
         run: npm run test
-        continue-on-error: true
 
       - name: Build browser bundles
         run: npm run build
@@ -67,11 +66,12 @@ jobs:
       - name: Install Xvfb
         run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
 
-      - name: Start the app and require a window
+      - name: Load real sites, close a tab, capture a screenshot
         id: launch
         run: |
           set -euo pipefail
           export XDG_CONFIG_HOME="$PWD/.smoke"
+          export KIMMINO_SMOKE=1
           mkdir -p "$XDG_CONFIG_HOME"
 
           APP=$(find browser/release/linux-unpacked -maxdepth 1 -type f -executable -name 'Kimmino*' | head -1)
@@ -82,20 +82,35 @@ jobs:
           fi
           echo "launching $APP"
 
-          # The app stays running once it boots, so a timeout is the expected end.
-          timeout --signal=TERM 45 xvfb-run -a --server-args="-screen 0 1440x900x24" \
-            "$APP" --no-sandbox --disable-gpu > smoke.out 2>&1 || echo "app exited or was stopped by timeout"
+          # KIMMINO_SMOKE drives the real tab manager: it loads the sites that
+          # were reported broken, closes a tab, captures a screenshot and exits
+          # with a non-zero status if any check fails. A timeout is a failure,
+          # not the expected end of the run.
+          timeout --signal=TERM 300 xvfb-run -a --server-args="-screen 0 1440x900x24" \
+            "$APP" --no-sandbox --disable-gpu > smoke.out 2>&1
 
-          echo "--- stdout/stderr ---"
+          echo "--- smoke ---"
           cat smoke.out
 
           LOG="$XDG_CONFIG_HOME/Kimmino/startup.log"
           echo "--- startup.log ---"
-          if [ -f "$LOG" ]; then cat "$LOG"; else echo "(missing: $LOG)"; ls -R "$XDG_CONFIG_HOME" || true; fi
+          if [ -f "$LOG" ]; then cat "$LOG"; else echo "(missing: $LOG)"; fi
 
           grep -q "boot ok" "$LOG"
           grep -q "window shown" "$LOG"
-          echo "launch verified: window painted"
+          grep -Eq "SMOKE ok +loads www.google.com" smoke.out
+          grep -Eq "SMOKE ok +loads www.youtube.com" smoke.out
+          grep -Eq "SMOKE ok +closes a tab" smoke.out
+          grep -Eq "SMOKE ok +captures a screenshot" smoke.out
+          grep -q "SMOKE smoke ok" smoke.out
+          grep -q "SMOKE memory" smoke.out || true
+
+          echo "launch verified: real pages load, tabs close, screenshots capture"
+
+          # The numbers behind the claims on the download page, published as a
+          # check annotation so they can be read without downloading artifacts.
+          SUMMARY=$(grep -E "SMOKE (ok|fail|memory)" smoke.out | tr '\n' ';' || true)
+          echo "::notice title=Kimmino packaged-app smoke::${SUMMARY}"
 
       - name: Report launch failure
         if: failure()

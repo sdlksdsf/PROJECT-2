@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BUILTIN_THEMES, DEFAULT_PREFERENCES, SEARCH_ENGINES, WALLPAPERS } from '@shared/defaults';
+import { BUILTIN_THEMES, DEFAULT_PREFERENCES, WALLPAPERS } from '@shared/defaults';
 import type {
   Bookmark,
   DeepPartial,
@@ -16,7 +16,7 @@ import type {
 } from '@shared/types';
 import { internalPageOf, internalUrl } from '@shared/types';
 import { api, isNative } from './bridge';
-import { toUrl } from './lib/url';
+import { engineName, toUrl } from './lib/url';
 
 export interface Toast {
   id: number;
@@ -245,6 +245,6 @@ export const useStore = create<Store>((set, get) => ({
   stopFocus: () => set({ focusSession: null })
 }));
 
-export const searchEngineName = (id: string): string => (SEARCH_ENGINES[id] ?? SEARCH_ENGINES.duckduckgo).name;
+export const searchEngineName = engineName;
 export const wallpapers = WALLPAPERS;
 export const builtinThemes = BUILTIN_THEMES;

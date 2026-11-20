@@ -1,6 +1,6 @@
 import type { OnBeforeRequestListenerDetails, OnHeadersReceivedListenerDetails, Session } from 'electron';
 import type { Preferences } from '../../shared/types';
-import { FilterEngine, registrableDomain, type BlockKind } from './engine';
+import { FilterEngine, isAuthHost, registrableDomain, type BlockKind } from './engine';
 
 export interface NetworkPrivacyContext {
   prefs: () => Preferences;
@@ -11,12 +11,30 @@ export interface NetworkPrivacyContext {
   isExempt?: (firstPartyHost: string) => boolean;
 }
 
-const CHROME_UA =
-  process.platform === 'darwin'
-    ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
-    : process.platform === 'win32'
-      ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
-      : 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+/**
+ * Chromium's real version, not a hardcoded one.
+ *
+ * This used to say Chrome/140 while the engine was Chromium 144, and combined
+ * with the client-hint scrubbing below it made Google refuse sign-in ("this
+ * browser or app may not be secure"). A UA that disagrees with the client hints
+ * the same process sends is exactly the signal those checks look for.
+ */
+function chromeVersion(): string {
+  return (process.versions.chrome ?? '144.0.0.0').split('.')[0];
+}
+
+function chromeUserAgent(): string {
+  const major = chromeVersion();
+  const platform =
+    process.platform === 'darwin'
+      ? 'Macintosh; Intel Mac OS X 10_15_7'
+      : process.platform === 'win32'
+        ? 'Windows NT 10.0; Win64; x64'
+        : 'X11; Linux x86_64';
+  return `Mozilla/5.0 (${platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
+}
+
+const CHROME_UA = chromeUserAgent();
 
 function isThirdParty(url: string, documentUrl: string | undefined): boolean {
   if (!documentUrl) return false;
@@ -84,8 +102,10 @@ export function applyNetworkPrivacy(ses: Session, ctx: NetworkPrivacyContext): (
       }
     }
 
-    // 3. Tracking parameter stripping (redirect, not block).
-    if (p.privacy.stripTrackingParams && activeEngine) {
+    // 3. Tracking parameter stripping — on navigations only. Rewriting a
+    //    sub-resource request (or turning a POST into a GET) is what used to
+    //    make pages hang or fail to load assets.
+    if (p.privacy.stripTrackingParams && activeEngine && details.resourceType === 'mainFrame' && details.method === 'GET') {
       const cleaned = activeEngine.stripTrackingParams(url);
       if (cleaned !== url) {
         ctx.onBlock(wcId, 'trackers', url, safeHost(url));
@@ -120,17 +140,21 @@ export function applyNetworkPrivacy(ses: Session, ctx: NetworkPrivacyContext): (
 
     const documentUrl = details.frame?.url || undefined;
     const third = isThirdParty(details.url, documentUrl);
+    const requestHost = safeHost(details.url);
+    // Sign-in endpoints need their cookies; stripping them is what made Google,
+    // Microsoft and Spotify logins fail inside Kimmino.
+    const authHost = isAuthHost(requestHost);
 
-    if (p.privacy.blockThirdPartyCookies && third && details.resourceType !== 'mainFrame') {
+    if (p.privacy.blockThirdPartyCookies && third && details.resourceType !== 'mainFrame' && !authHost) {
       remove('Cookie');
     }
     if (p.privacy.doNotTrack) set('DNT', '1');
     set('Sec-GPC', '1');
 
     if (p.privacy.fingerprintProtection) {
-      for (const key of Object.keys(headers)) {
-        if (/^sec-ch-ua/i.test(key)) delete headers[key];
-      }
+      // Language normalisation only. Client hints are left alone on purpose:
+      // deleting `sec-ch-ua` while sending a Chrome UA is a contradiction that
+      // bot checks treat as fraud.
       set('Accept-Language', p.system.language ? `${p.system.language},en;q=0.8` : 'en-US,en;q=0.9');
     }
 
@@ -158,7 +182,7 @@ export function applyNetworkPrivacy(ses: Session, ctx: NetworkPrivacyContext): (
     const third = isThirdParty(details.url, documentUrl);
     const responseHeaders = details.responseHeaders ?? {};
 
-    if (p.privacy.blockThirdPartyCookies && third) {
+    if (p.privacy.blockThirdPartyCookies && third && !isAuthHost(safeHost(details.url))) {
       let blocked = false;
       for (const key of Object.keys(responseHeaders)) {
         if (/^set-cookie/i.test(key)) {
