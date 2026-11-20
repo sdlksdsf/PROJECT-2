@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   verify:
@@ -41,4 +42,80 @@ jobs:
         with:
           name: website-dist
           path: website/dist
+          retention-days: 7
+
+  launch:
+    name: Launch the packaged app (Xvfb)
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Build bundles and an unpacked Linux app
+        run: |
+          npm run build
+          npx electron-builder --config electron-builder.yml --linux dir --publish never
+        working-directory: browser
+
+      - name: Install Xvfb
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq xvfb
+
+      - name: Start the app and require a window
+        id: launch
+        run: |
+          set -euo pipefail
+          export XDG_CONFIG_HOME="$PWD/.smoke"
+          mkdir -p "$XDG_CONFIG_HOME"
+
+          APP=$(find browser/release/linux-unpacked -maxdepth 1 -type f -executable -name 'Kimmino*' | head -1)
+          if [ -z "$APP" ]; then
+            echo "no executable found in browser/release/linux-unpacked" | tee smoke.out
+            ls -la browser/release/linux-unpacked | tee -a smoke.out
+            exit 1
+          fi
+          echo "launching $APP"
+
+          # The app stays running once it boots, so a timeout is the expected end.
+          timeout --signal=TERM 45 xvfb-run -a --server-args="-screen 0 1440x900x24" \
+            "$APP" --no-sandbox --disable-gpu > smoke.out 2>&1 || echo "app exited or was stopped by timeout"
+
+          echo "--- stdout/stderr ---"
+          cat smoke.out
+
+          LOG="$XDG_CONFIG_HOME/Kimmino/startup.log"
+          echo "--- startup.log ---"
+          if [ -f "$LOG" ]; then cat "$LOG"; else echo "(missing: $LOG)"; ls -R "$XDG_CONFIG_HOME" || true; fi
+
+          grep -q "boot ok" "$LOG"
+          grep -q "window shown" "$LOG"
+          echo "launch verified: window painted"
+
+      - name: Report launch failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -f "$PWD/.smoke/Kimmino/startup.log" ]; then
+            cp "$PWD/.smoke/Kimmino/startup.log" smoke-startup.log
+          else
+            cp smoke.out smoke-startup.log
+          fi
+          node tools/report-build-failure.mjs smoke-startup.log "Packaged app launch (Xvfb)"
+
+      - name: Keep the launch log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: launch-log
+          path: |
+            smoke.out
+            .smoke/Kimmino/startup.log
+          if-no-files-found: warn
           retention-days: 7
